@@ -1,0 +1,105 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 151891d89f2e993469d0fa289fe2699c, type: 3}
+  m_Name: ClimbingConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Levelstep.LevelstepClimbingConfig
+  wallModelPath: Assets/Levelstep/Models/ClimbingWall.fbx
+  holdModelPaths:
+  - Assets/Levelstep/Models/sm_holdBM_1.fbx
+  rigPrefabPath: Assets/Samples/XR Interaction Toolkit/3.5.1/Starter Assets/Prefabs/XR Origin (XR Rig).prefab
+  holdMeshColliderConvex: 1
+  holdYawOffset: 0
+  holdPitchOffset: 0
+  holdRollOffset: 0
+  columns: 4
+  rows: 9
+  columnSpacing: 2.3
+  rowSpacing: 0.8
+  startHeight: 0.55
+  staggerOffset: 1.15
+  surfaceOffset: 0.08
+  wallPosition: {x: 0, y: 0, z: 0}
+  wallYaw: 0
+  buildArena: 1
+  arenaSize: 30
+  holdPrefabFolder: Assets/Levelstep/Prefabs
+  wallPrefabPath: Assets/Levelstep/Prefabs/Climbing Wall.prefab
+  scenePath: Assets/Levelstep/Scenes/ClimbingScene.unity
+  holdPrefabPaths:
+  - Assets/Levelstep/Prefabs/Hold00_sm_holdBM_1.prefab
+  leftHandKeyword: Left
+  rightHandKeyword: Right
+  maxStamina: 100
+  drainRate: 40
+  regenRate: 45
+  regenDelay: 0.6
+  minStaminaToGrip: 20
+  hapticsEnabled: 1
+  hapticAmplitude: 0.6
+  hapticDuration: 0.15
+  showStaminaBars: 1
+  barSize: {x: 0.12, y: 0.015}
+  barOffset: {x: 0, y: 0.08, z: 0}
+  barFillColor: {r: 0.42, g: 0.9, b: 0.65, a: 1}
+  barBackColor: {r: 0, g: 0, b: 0, a: 0.45}
+  barFollowSmoothing: 12
+  tintHands: 1
+  handTintMax: 0.85
+  handTintColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  difficultyPresets:
+  - name: Easy
+    routeColor: {r: 0.25, g: 1, b: 0.3, a: 1}
+    maxStamina: 120
+    drainRate: 25
+    regenRate: 60
+    regenDelay: 0.4
+    minStaminaToGrip: 15
+  - name: Medium
+    routeColor: {r: 1, g: 0.82, b: 0, a: 1}
+    maxStamina: 100
+    drainRate: 40
+    regenRate: 45
+    regenDelay: 0.6
+    minStaminaToGrip: 20
+  - name: Hard
+    routeColor: {r: 1, g: 0.25, b: 0.25, a: 1}
+    maxStamina: 80
+    drainRate: 60
+    regenRate: 30
+    regenDelay: 0.8
+    minStaminaToGrip: 30
+  defaultDifficultyIndex: 1
+  routeCount: 3
+  routePattern: 0
+  fullOpacity: 1
+  fadedOpacity: 0.25
+  rememberDifficulty: 1
+  menuPosition: {x: -1.6, y: 1.4, z: 1}
+  menuBlockScale: {x: 0.35, y: 0.12, z: 0.3}
+  menuBlockSpacing: 0.5
+  menuLabelScale: 1
+  menuPanelSize: {x: 1.2, y: 0.6}
+  balanceDeviceNameFilter: WT901BLE67
+  balanceAutoConnect: 1
+  balanceAutoCalibrateSeconds: 1
+  balanceStableTiltDeg: 4
+  balanceUnstableTiltDeg: 14
+  balanceHardFailTiltDeg: 30
+  balanceStableRateDegS: 40
+  balanceUnstableRateDegS: 120
+  balanceHardFailRateDegS: 250
+  balanceMeterBuildPerSec: 0.5
+  balanceMeterRecoverPerSec: 0.35
+  balanceMinSecondsBetweenFalls: 1
+  balanceHudEnabled: 1
+  balanceBarBackColor: {r: 0, g: 0, b: 0, a: 0.55}
+  balanceBarFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 0.9}
