@@ -74,6 +74,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2405ade801986742a048b1f6a2238aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Levelstep.LevelstepHold
+  role: 0
+  markerPrefab: {fileID: 0}
+  markerOffset: {x: 0, y: 0.5, z: 0}
+  config: {fileID: 11400000, guid: d45a9ebacd914c948a3eee66b087d393, type: 2}
   model: {fileID: 0}
   generateColliders: 1
   surfaceOffset: 0
@@ -81,6 +85,7 @@ MonoBehaviour:
   yawOffset: 0
   rollOffset: 0
   m_AppliedModel: {fileID: 0}
+  m_PlacedMarker: {fileID: 0}
 --- !u!114 &3288596416192635482
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -37,6 +37,11 @@ namespace Levelstep
         [Tooltip("Optional debug overlay text.")]
         public Text debugText;
 
+        [Header("Rendering")]
+        [Tooltip("Optional material that renders the HUD on top of all scene geometry (ZTest Always). " +
+                 "If set, Back/Fill/Timer/Debug each get their own copy so text keeps its font texture.")]
+        public Material hudMaterial;
+
         [Header("Camera lock")]
         [Tooltip("Keep the HUD locked in front of the headset.")]
         public bool lockToCamera = true;
@@ -108,6 +113,8 @@ namespace Levelstep
                 debugText.gameObject.SetActive(false);
 
             if (hudRoot != null) hudRoot.gameObject.SetActive(true);
+
+            ApplyHudMaterial();
         }
 
         void LateUpdate()
@@ -169,6 +176,25 @@ namespace Levelstep
             foreach (var text in root.GetComponentsInChildren<Text>(true))
                 if (text.gameObject.name == name) return text;
             return null;
+        }
+
+        void ApplyHudMaterial()
+        {
+            if (hudMaterial == null) return;
+
+            if (backImage != null) AssignOverlay(backImage);
+            if (fillImage != null) AssignOverlay(fillImage);
+            if (timerText != null) AssignOverlay(timerText);
+            if (debugText != null) AssignOverlay(debugText);
+
+            Debug.Log("[BalanceBoardUI] HUD rendered always-on-top (material '" + hudMaterial.name + "').");
+        }
+
+        void AssignOverlay(Graphic graphic)
+        {
+            var overlay = new Material(hudMaterial);
+            overlay.name = hudMaterial.name + " (" + graphic.gameObject.name + ")";
+            graphic.material = overlay;
         }
 
         void UpdateCamera()
