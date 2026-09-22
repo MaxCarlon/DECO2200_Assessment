@@ -58,25 +58,25 @@ MonoBehaviour:
   difficultyPresets:
   - name: Easy
     routeColor: {r: 0.25, g: 1, b: 0.3, a: 1}
+    maxStamina: 140
+    drainRate: 15
+    regenRate: 80
+    regenDelay: 0.2
+    minStaminaToGrip: 10
+  - name: Medium
+    routeColor: {r: 1, g: 0.82, b: 0, a: 1}
     maxStamina: 120
     drainRate: 25
     regenRate: 60
     regenDelay: 0.4
     minStaminaToGrip: 15
-  - name: Medium
-    routeColor: {r: 1, g: 0.82, b: 0, a: 1}
-    maxStamina: 100
-    drainRate: 40
-    regenRate: 45
-    regenDelay: 0.6
-    minStaminaToGrip: 20
   - name: Hard
     routeColor: {r: 1, g: 0.25, b: 0.25, a: 1}
-    maxStamina: 80
-    drainRate: 60
-    regenRate: 30
-    regenDelay: 0.8
-    minStaminaToGrip: 30
+    maxStamina: 100
+    drainRate: 25
+    regenRate: 60
+    regenDelay: 0.6
+    minStaminaToGrip: 15
   defaultDifficultyIndex: 1
   routeCount: 3
   routePattern: 0
@@ -88,7 +88,12 @@ MonoBehaviour:
   menuBlockSpacing: 0.5
   menuLabelScale: 1
   menuPanelSize: {x: 1.2, y: 0.6}
+  holdStartMarkerPrefab: {fileID: 0}
+  holdFinishMarkerPrefab: {fileID: 0}
+  showRouteTimer: 1
+  routeTimerColor: {r: 1, g: 1, b: 1, a: 1}
   balanceDeviceNameFilter: WT901BLE67
+  balanceSerialPortName: 
   balanceAutoConnect: 1
   balanceAutoCalibrateSeconds: 1
   balanceStableTiltDeg: 4
