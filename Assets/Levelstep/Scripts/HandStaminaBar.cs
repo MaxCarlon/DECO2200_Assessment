@@ -22,6 +22,9 @@ namespace Levelstep
         int m_TintRetryFrame;
         Material[] m_TintMaterials;
         Color[] m_OriginalColors;
+        float m_LastFillWidth = -1f;
+        Color[] m_LastTintColors;
+        int m_TintRetryCadence = 30;
 
         static Texture2D s_WhiteTexture;
         static Sprite s_WhiteSprite;
@@ -44,7 +47,8 @@ namespace Levelstep
             UpdateBillboard();
             if (!m_HandleTint && m_Config != null && m_Config.tintHands && Time.frameCount >= m_TintRetryFrame)
             {
-                m_TintRetryFrame = Time.frameCount + 30;
+                m_TintRetryFrame = Time.frameCount + m_TintRetryCadence;
+                if (m_TintRetryCadence < 600) m_TintRetryCadence *= 2;
                 SetupHandTint();
             }
             UpdateHandTint();
@@ -110,8 +114,10 @@ namespace Levelstep
 
         void UpdateFill()
         {
-            float n = m_Controller.GetNormalizedStamina(m_Side);
-            m_FillRect.sizeDelta = new Vector2(m_BarWidth * Mathf.Clamp01(n), m_BarHeight);
+            float width = m_BarWidth * Mathf.Clamp01(m_Controller.GetNormalizedStamina(m_Side));
+            if (Mathf.Abs(width - m_LastFillWidth) <= 0.0001f) return;
+            m_LastFillWidth = width;
+            m_FillRect.sizeDelta = new Vector2(width, m_BarHeight);
         }
 
         void UpdateBillboard()
@@ -173,6 +179,12 @@ namespace Levelstep
             m_TintMaterials = mats;
             m_OriginalColors = origins;
             m_HandleTint = any;
+            if (any)
+            {
+                m_LastTintColors = new Color[mats.Length];
+                for (int i = 0; i < m_LastTintColors.Length; i++)
+                    m_LastTintColors[i] = new Color(-1f, -1f, -1f, -1f);
+            }
         }
 
         Renderer[] FindSideRenderers()
@@ -223,6 +235,17 @@ namespace Levelstep
                 Color original = m_OriginalColors[i];
                 Color target = Color.Lerp(original, red, fatigue * amount);
                 target.a = original.a;
+                if (m_LastTintColors == null || i >= m_LastTintColors.Length)
+                {
+                    WriteColor(mat, target);
+                    continue;
+                }
+                float dr = target.r - m_LastTintColors[i].r;
+                float dg = target.g - m_LastTintColors[i].g;
+                float db = target.b - m_LastTintColors[i].b;
+                float da = target.a - m_LastTintColors[i].a;
+                if (dr * dr + dg * dg + db * db + da * da < 0.000001f) continue;
+                m_LastTintColors[i] = target;
                 WriteColor(mat, target);
             }
         }

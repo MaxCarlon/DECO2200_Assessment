@@ -72,6 +72,8 @@ namespace Levelstep
         bool m_Show;
         bool m_CameraLogged;
         bool m_NoCameraLogged;
+        long m_LastTimerStamp = long.MinValue;
+        Vector2 m_LastFillSize = new Vector2(float.MinValue, 0f);
 
         void Start()
         {
@@ -133,7 +135,14 @@ namespace Levelstep
             }
 
             if (fillImage != null && m_Meter != null)
-                fillImage.rectTransform.sizeDelta = new Vector2(m_BarWidth * Mathf.Clamp01(m_Meter.Meter), m_BarHeight);
+            {
+                float width = m_BarWidth * Mathf.Clamp01(m_Meter.Meter);
+                if (Mathf.Abs(width - m_LastFillSize.x) > 0.0001f)
+                {
+                    m_LastFillSize = new Vector2(width, m_BarHeight);
+                    fillImage.rectTransform.sizeDelta = m_LastFillSize;
+                }
+            }
 
             if (debugText != null)
             {
@@ -224,39 +233,59 @@ namespace Levelstep
         void UpdateTimerText()
         {
             if (timerText == null) return;
+
             bool enabled = config != null ? config.showRouteTimer : routeTimerEnabled;
             if (!enabled)
             {
-                timerText.text = "";
-                timerText.gameObject.SetActive(false);
+                if (timerText.gameObject.activeSelf)
+                {
+                    timerText.text = "";
+                    timerText.gameObject.SetActive(false);
+                }
                 return;
             }
 
             var timer = RouteTimer.Instance;
-            string text;
-            Color color = routeTimerColor;
 
+            long stamp;
             if (timer == null || timer.CurrentState == RouteTimer.State.Idle)
             {
-                text = "";
+                stamp = 0L;
             }
             else if (timer.CurrentState == RouteTimer.State.Running)
             {
-                text = FormatTime(timer.Elapsed);
+                stamp = 1000000L + Mathf.FloorToInt(timer.Elapsed * 10f);
             }
             else if (Time.time - timer.LastEndTime < ResultShowSeconds)
             {
-                text = (timer.LastSuccess ? "FINISH  " : "FELL  ") + FormatTime(timer.LastResult);
-                color = timer.LastSuccess ? routeSuccessColor : routeFailColor;
+                stamp = 2000000L + (timer.LastSuccess ? 1000000L : 0L) + Mathf.FloorToInt(timer.LastResult * 10f);
             }
             else
             {
-                text = "";
+                stamp = 0L;
+            }
+
+            if (stamp == m_LastTimerStamp) return;
+            m_LastTimerStamp = stamp;
+
+            string text = "";
+            Color color = routeTimerColor;
+            if (stamp != 0L)
+            {
+                if (stamp < 2000000L)
+                {
+                    text = FormatTime(timer.Elapsed);
+                }
+                else
+                {
+                    text = (timer.LastSuccess ? "FINISH  " : "FELL  ") + FormatTime(timer.LastResult);
+                    color = timer.LastSuccess ? routeSuccessColor : routeFailColor;
+                }
             }
 
             timerText.text = text;
             timerText.color = color;
-            timerText.gameObject.SetActive(!string.IsNullOrEmpty(text));
+            timerText.gameObject.SetActive(stamp != 0L);
         }
 
         static string FormatTime(float seconds)

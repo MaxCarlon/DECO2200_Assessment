@@ -59,6 +59,7 @@ namespace Levelstep
         public readonly HandController Right = new HandController();
 
         XRInteractionManager m_Manager;
+        int m_ManagerRetryFrame;
         readonly HashSet<ClimbInteractable> m_Tracked = new HashSet<ClimbInteractable>();
         readonly Dictionary<object, HandSide> m_HandCache = new Dictionary<object, HandSide>();
         readonly Dictionary<HandSide, Transform> m_AnchorCache = new Dictionary<HandSide, Transform>();
@@ -81,7 +82,7 @@ namespace Levelstep
 
         void Update()
         {
-            if (m_Manager == null)
+            if (m_Manager == null && Time.frameCount >= m_ManagerRetryFrame)
                 AttemptManager();
 
             TickHand(Left, HandSide.Left);
@@ -191,7 +192,11 @@ namespace Levelstep
         {
             if (m_Manager != null) return;
             m_Manager = GetComponent<XRInteractionManager>() ?? UnityEngine.Object.FindAnyObjectByType<XRInteractionManager>();
-            if (m_Manager == null) return;
+            if (m_Manager == null)
+            {
+                m_ManagerRetryFrame = Time.frameCount + 30;
+                return;
+            }
             m_Manager.interactableRegistered += OnInteractableRegistered;
             m_Manager.interactableUnregistered += OnInteractableUnregistered;
             RegisterExistingInteractables();
@@ -339,8 +344,11 @@ namespace Levelstep
 
             Transform match = null;
             string anchorWord = side == HandSide.Left ? "Left" : "Right";
-            foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+            var all = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include);
+
+            for (int i = 0; i < all.Length; i++)
             {
+                Transform t = all[i];
                 if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) < 0) continue;
                 if (IsExactAnchor(t, anchorWord))
                 {
@@ -350,8 +358,9 @@ namespace Levelstep
             }
 
             if (match == null)
-                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+                for (int i = 0; i < all.Length; i++)
                 {
+                    Transform t = all[i];
                     if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) < 0) continue;
                     if (t.name.IndexOf(anchorWord, StringComparison.OrdinalIgnoreCase) < 0) continue;
                     if (PicksKeyword(t, anchorWord))
@@ -362,8 +371,9 @@ namespace Levelstep
                 }
 
             if (match == null)
-                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+                for (int i = 0; i < all.Length; i++)
                 {
+                    Transform t = all[i];
                     if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         match = t;

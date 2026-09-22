@@ -11,27 +11,25 @@ namespace Levelstep
 
     /// <summary>
     /// Rides on the root of a climb-ready hold. Assign a model (FBX/prefab) to <see cref="model"/>
-    /// and the mesh is applied automatically - colliders, shared hold material and culling flags
-    /// are baked in, in the scene or in Prefab Mode. Set the difficulty on the neighbouring
-    /// <see cref="HoldRouteTag"/> per hold, then either snap it to a wall face with the inspector
-    /// button or click a wall face in the Scene view (Tools/Levelstep/Snap Hold).
+    /// and the mesh is applied automatically. Set the difficulty on the neighbouring
+    /// <see cref="HoldRouteTag"/> per hold.
     ///
-    /// Mark a hold as Start or Finish to define the route; a marker prefab (e.g. a green or
-    /// checkered flag) is spawned on it at runtime so players can tell where a route begins and
-    /// ends. The route timer starts when the Start hold is grabbed and stops on the Finish hold.
+    /// Mark a hold as Start or Finish and assign <see cref="markerPrefab"/> (e.g. the LEVELstep
+    /// START/FINISH text label prefabs). The marker is placed above the hold once and is only
+    /// visible while that hold's route is the currently selected difficulty.
     /// </summary>
     public class LevelstepHold : MonoBehaviour
     {
-        [Tooltip("Role of this hold on the route. Start/Finish spawn a marker so players can tell where the route begins and ends (the route timer also watches these).")]
+        [Tooltip("Role of this hold on the route. Start/Finish show their markerPrefab text label above the hold while the matching difficulty is selected.")]
         public RouteRole role = RouteRole.Normal;
 
-        [Tooltip("Marker prefab (e.g. a small green or checkered flag) spawned on this hold when it is a Start/Finish hold. Leave empty to use the config's Start/Finish marker prefabs.")]
+        [Tooltip("Prefab placed above this hold when marked Start or Finish (the LEVELstep text label prefabs).")]
         public GameObject markerPrefab;
 
-        [Tooltip("Local position the spawned marker sits at, relative to the hold root (defaults to floating above the hold).")]
+        [Tooltip("Offset where the marker is placed, relative to the hold root (metres).")]
         public Vector3 markerOffset = new Vector3(0f, 0.5f, 0f);
 
-        [Tooltip("Config asset used for the Start/Finish marker prefab fallbacks. Auto-assigned in the inspector.")]
+        [Tooltip("Config asset used as a fallback for settings. Auto-assigned in the inspector.")]
         public LevelstepClimbingConfig config;
 
         [Tooltip("Hold model (FBX or prefab). Assigning it applies the mesh to this hold automatically.")]
@@ -51,24 +49,75 @@ namespace Levelstep
         [SerializeField, HideInInspector] GameObject m_AppliedModel;
         [SerializeField, HideInInspector] GameObject m_PlacedMarker;
 
+        HoldRouteTag m_RouteTag;
+        Transform m_Camera;
+
+        void OnEnable()
+        {
+            DifficultyRouteController.SelectionChanged += OnSelectionChanged;
+        }
+
+        void OnDisable()
+        {
+            DifficultyRouteController.SelectionChanged -= OnSelectionChanged;
+        }
+
         void Start()
         {
             if (role == RouteRole.Normal || m_PlacedMarker != null) return;
-
-            GameObject prefab = markerPrefab;
-            if (prefab == null && config != null)
+            if (markerPrefab == null)
             {
-                prefab = role == RouteRole.Start ? config.holdStartMarkerPrefab
-                    : role == RouteRole.Finish ? config.holdFinishMarkerPrefab
-                    : null;
+                Debug.LogWarning("[LevelstepHold] " + name + " is marked " + role + " but has no markerPrefab assigned.");
+                return;
             }
-            if (prefab == null) return;
 
-            var marker = Instantiate(prefab, transform);
-            marker.transform.localPosition = markerOffset;
-            marker.transform.localRotation = Quaternion.identity;
-            marker.name = role == RouteRole.Start ? "StartMarker" : "FinishMarker";
-            m_PlacedMarker = marker;
+            m_PlacedMarker = Instantiate(markerPrefab, transform);
+            m_PlacedMarker.name = markerPrefab.name;
+            m_PlacedMarker.transform.localPosition = markerOffset;
+            m_PlacedMarker.transform.localRotation = Quaternion.identity;
+            m_PlacedMarker.SetActive(false);
+
+            RefreshMarker();
+        }
+
+        void OnSelectionChanged(int selected)
+        {
+            RefreshMarker();
+        }
+
+        void LateUpdate()
+        {
+            if (m_PlacedMarker == null || !m_PlacedMarker.activeSelf) return;
+            if (m_Camera == null)
+            {
+                m_Camera = FindCamera();
+                return;
+            }
+
+            Vector3 direction = m_PlacedMarker.transform.position - m_Camera.position;
+            if (direction.sqrMagnitude < 0.0001f) return;
+            m_PlacedMarker.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        }
+
+        void RefreshMarker()
+        {
+            if (m_PlacedMarker == null) return;
+
+            if (m_RouteTag == null) m_RouteTag = GetComponent<HoldRouteTag>();
+            int route = m_RouteTag != null ? (int)m_RouteTag.routeType : -1;
+            int selected = DifficultyRouteController.Instance != null
+                ? DifficultyRouteController.Instance.SelectedIndex
+                : -1;
+            bool visible = route < 0 || selected < 0 || route == selected;
+
+            if (m_PlacedMarker.activeSelf != visible) m_PlacedMarker.SetActive(visible);
+        }
+
+        static Transform FindCamera()
+        {
+            if (Camera.main != null) return Camera.main.transform;
+            var cam = Object.FindAnyObjectByType<Camera>();
+            return cam != null ? cam.transform : null;
         }
 
 #if UNITY_EDITOR

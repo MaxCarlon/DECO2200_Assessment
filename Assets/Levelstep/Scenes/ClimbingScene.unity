@@ -395,9 +395,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 919132149155446097, guid: 3e53cc05900c1914baac450929085b37, type: 3}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 2152809234785473332, guid: c4d529500a562dd43849df43e12e1943, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: 3e53cc05900c1914baac450929085b37, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -2393,9 +2405,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: d45a9ebacd914c948a3eee66b087d393, type: 2}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 2152809234785473332, guid: c4d529500a562dd43849df43e12e1943, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: 3e53cc05900c1914baac450929085b37, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -4388,9 +4412,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: d45a9ebacd914c948a3eee66b087d393, type: 2}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 6404734086762605415, guid: e679e89dd5699224cabba07bd53b5f78, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: 69b81e43c518906458178269ce075404, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -4412,6 +4448,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1767192439, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      propertyPath: far clip plane
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 1767192439, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      propertyPath: near clip plane
+      value: 0.03
+      objectReference: {fileID: 0}
     - target: {fileID: 950175637189515454, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 0
@@ -4520,6 +4564,10 @@ PrefabInstance:
       propertyPath: m_RenderPostProcessing
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7347985736721345035, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      propertyPath: m_TurnAmount
+      value: 30
+      objectReference: {fileID: 0}
     - target: {fileID: 8045326174636273504, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 0
@@ -4533,7 +4581,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 3904471525139099824, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
@@ -4641,6 +4690,52 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 99a225e9728801041bedccc5e1712b89, type: 3}
   m_PrefabInstance: {fileID: 1178707596}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1179797614
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1179797616}
+  - component: {fileID: 1179797615}
+  m_Layer: 0
+  m_Name: LevelstepFrameRate
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1179797615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179797614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3c9223989f12d74799bc002756ddb3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Levelstep.LevelstepFrameRate
+  targetFrameRate: 90
+  disableVsync: 1
+--- !u!4 &1179797616
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179797614}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1185977892 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 69b81e43c518906458178269ce075404, type: 3}
@@ -4711,9 +4806,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 919132149155446097, guid: 69b81e43c518906458178269ce075404, type: 3}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 6404734086762605415, guid: e679e89dd5699224cabba07bd53b5f78, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: 69b81e43c518906458178269ce075404, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -5144,9 +5251,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 919132149155446097, guid: 69b81e43c518906458178269ce075404, type: 3}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 2152809234785473332, guid: c4d529500a562dd43849df43e12e1943, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: 69b81e43c518906458178269ce075404, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -6388,9 +6507,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 919132149155446097, guid: fd0282a476a52c048b5762d0295bab54, type: 3}
     - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerPrefab
+      value: 
+      objectReference: {fileID: 6404734086762605415, guid: e679e89dd5699224cabba07bd53b5f78, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
       propertyPath: m_AppliedModel
       value: 
       objectReference: {fileID: 919132149155446097, guid: fd0282a476a52c048b5762d0295bab54, type: 3}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7969449546960810932, guid: 826cd0f487e7fb64f9c6ee52976107a9, type: 3}
+      propertyPath: markerOffset.z
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -7667,3 +7798,4 @@ SceneRoots:
   - {fileID: 1131243621}
   - {fileID: 343947954}
   - {fileID: 1555074298}
+  - {fileID: 1179797616}

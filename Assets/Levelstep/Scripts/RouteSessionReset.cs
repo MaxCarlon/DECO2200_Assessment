@@ -16,7 +16,11 @@ namespace Levelstep
     public class RouteSessionReset : MonoBehaviour
     {
         const float MenuHoldSeconds = 2f;
+        const float PollInterval = 0.05f;
         float m_MenusHeld;
+        float m_NextButtonPoll = -1f;
+        bool m_LeftHeld;
+        bool m_RightHeld;
 
         void Update()
         {
@@ -28,9 +32,13 @@ namespace Levelstep
 
         void TickControllerHold()
         {
-            bool left = MenuHeld(XRNode.LeftHand);
-            bool right = MenuHeld(XRNode.RightHand);
-            bool both = left && right;
+            if (Time.unscaledTime >= m_NextButtonPoll)
+            {
+                m_NextButtonPoll = Time.unscaledTime + PollInterval;
+                m_LeftHeld = MenuHeld(XRNode.LeftHand);
+                m_RightHeld = MenuHeld(XRNode.RightHand);
+            }
+            bool both = m_LeftHeld && m_RightHeld;
             m_MenusHeld = both ? m_MenusHeld + Time.unscaledDeltaTime : 0f;
             if (both && m_MenusHeld >= MenuHoldSeconds)
             {
