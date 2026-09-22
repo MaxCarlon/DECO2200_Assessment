@@ -22,7 +22,7 @@ namespace Levelstep.Editor
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             Debug.Log("[Levelstep] Balance board tool opened scene '" + scene.path + "'.");
 
-            var root = Object.FindFirstObjectByType<BalanceBoardBridge>();
+            var root = Object.FindAnyObjectByType<BalanceBoardBridge>();
             if (root == null)
             {
                 var go = new GameObject("Balance Board");

@@ -190,7 +190,7 @@ namespace Levelstep
         void AttemptManager()
         {
             if (m_Manager != null) return;
-            m_Manager = GetComponent<XRInteractionManager>() ?? UnityEngine.Object.FindFirstObjectByType<XRInteractionManager>();
+            m_Manager = GetComponent<XRInteractionManager>() ?? UnityEngine.Object.FindAnyObjectByType<XRInteractionManager>();
             if (m_Manager == null) return;
             m_Manager.interactableRegistered += OnInteractableRegistered;
             m_Manager.interactableUnregistered += OnInteractableUnregistered;
@@ -199,7 +199,7 @@ namespace Levelstep
 
         void RegisterExistingInteractables()
         {
-            foreach (var climb in UnityEngine.Object.FindObjectsByType<ClimbInteractable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var climb in UnityEngine.Object.FindObjectsByType<ClimbInteractable>(FindObjectsInactive.Include))
                 Track(climb);
         }
 
@@ -339,7 +339,7 @@ namespace Levelstep
 
             Transform match = null;
             string anchorWord = side == HandSide.Left ? "Left" : "Right";
-            foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
             {
                 if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) < 0) continue;
                 if (IsExactAnchor(t, anchorWord))
@@ -350,7 +350,7 @@ namespace Levelstep
             }
 
             if (match == null)
-                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
                 {
                     if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) < 0) continue;
                     if (t.name.IndexOf(anchorWord, StringComparison.OrdinalIgnoreCase) < 0) continue;
@@ -362,7 +362,7 @@ namespace Levelstep
                 }
 
             if (match == null)
-                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
                 {
                     if (t.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                     {

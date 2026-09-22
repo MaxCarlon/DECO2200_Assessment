@@ -130,7 +130,7 @@ namespace Levelstep
         static Transform FindCamera()
         {
             if (Camera.main != null) return Camera.main.transform;
-            var cam = Object.FindFirstObjectByType<Camera>();
+            var cam = Object.FindAnyObjectByType<Camera>();
             return cam != null ? cam.transform : null;
         }
 
@@ -179,7 +179,7 @@ namespace Levelstep
         {
             string keyword = SideKeyword();
             var result = new List<Renderer>();
-            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include))
             {
                 if (r == null) continue;
                 if (AncestorMatches(r.transform, keyword, 4))

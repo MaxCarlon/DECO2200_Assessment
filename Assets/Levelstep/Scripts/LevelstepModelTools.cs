@@ -40,7 +40,7 @@ namespace Levelstep
                     modelGo = ReplaceModel(hold.transform, hold.model);
 
                 if (hold.generateColliders && modelGo != null)
-                    AddMeshColliders(modelGo, convex: true);
+                    AddMeshColliders(modelGo, convex: false);
 
                 DisableCulling(hold.transform);
                 ApplyHoldMaterial(hold.transform);

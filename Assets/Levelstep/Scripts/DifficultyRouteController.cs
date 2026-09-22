@@ -52,7 +52,7 @@ namespace Levelstep
 
         void Collect()
         {
-            var tags = UnityEngine.Object.FindObjectsByType<HoldRouteTag>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var tags = UnityEngine.Object.FindObjectsByType<HoldRouteTag>(FindObjectsInactive.Include);
             m_Entries = new Entry[tags.Length];
             SampleWallTone(tags);
             for (int i = 0; i < tags.Length; i++)
@@ -92,7 +92,7 @@ namespace Levelstep
                 : mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.gray;
 
             float lightFactor = 1f;
-            var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
             for (int i = 0; i < lights.Length; i++)
             {
                 if (lights[i].type != LightType.Directional) continue;
