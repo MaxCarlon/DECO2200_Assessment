@@ -789,6 +789,9 @@ GameObject:
   - component: {fileID: 281317394}
   - component: {fileID: 581317592}
   - component: {fileID: 681317593}
+  - component: {fileID: 681317596}
+  - component: {fileID: 681317595}
+  - component: {fileID: 681317594}
   m_Layer: 0
   m_Name: Balance Board
   m_TagString: Untagged
@@ -854,6 +857,7 @@ MonoBehaviour:
   minSecondsBetweenFalls: 1
   spaceFailsafe: 1
   debugOverlay: 0
+  ActivePreset: chain
 --- !u!114 &281317396
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2150,6 +2154,66 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Levelstep.RouteTimer
   letGoGraceSeconds: 0.4
+--- !u!114 &681317594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281317393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8b9ad2eb335a6745b2b31f9005add0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Levelstep.BalanceMeterPresetSwitcher
+  chain: {fileID: 681317596}
+  loop: {fileID: 681317595}
+--- !u!114 &681317595
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281317393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 311fa372f23d9ea45baab012b3d1f49e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Levelstep.BalanceMeterControllerLoop
+  controller: {fileID: 281317395}
+  stableTiltDeg: 1
+  unstableTiltDeg: 2
+  hardFailTiltDeg: 40
+  stableRateDegS: 5
+  unstableRateDegS: 15
+  hardFailRateDegS: 250
+  buildPerSec: 0.5
+  recoverPerSec: 0.5
+  instabilitySmoothing: 4
+  minSecondsBetweenFalls: 1
+--- !u!114 &681317596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281317393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc3dda29e3be7f849823f8c7dd7653bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Levelstep.BalanceMeterControllerChain
+  controller: {fileID: 281317395}
+  stableTiltDeg: 3
+  unstableTiltDeg: 4
+  hardFailTiltDeg: 40
+  stableRateDegS: 80
+  unstableRateDegS: 120
+  hardFailRateDegS: 250
+  buildPerSec: 0.25
+  recoverPerSec: 0.5
+  instabilitySmoothing: 4
+  minSecondsBetweenFalls: 1
 --- !u!1001 &686931879
 PrefabInstance:
   m_ObjectHideFlags: 0

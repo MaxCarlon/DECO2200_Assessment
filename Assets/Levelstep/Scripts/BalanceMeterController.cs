@@ -76,6 +76,9 @@ namespace Levelstep
         [Tooltip("Show a live readout + thresholds overlay (toggle in play with T).")]
         public bool debugOverlay = false;
 
+        [Tooltip("Name of the active board preset (chain/loop), set by BalanceMeterPresetSwitcher with K/L.")]
+        public string ActivePreset = "chain";
+
         public static BalanceMeterController Instance { get; private set; }
 
         /// <summary>Current balance meter, 0 (stable) to 1 (falling).</summary>
@@ -247,6 +250,7 @@ namespace Levelstep
             $"Tilt {TiltMagnitude:F1}\u00b0   Rate {RateMagnitude:F0}\u00b0/s\n" +
             $"Instability {Instability:F2}   Meter {Meter:F2}\n" +
             $"Falls {FellCount}\n\n" +
+            $"Active {ActivePreset}   K chain / L loop\n" +
             $"\u005b/\u005d stable\u00b0   -/= unstable\u00b0   T overlay   B recalibrate\n" +
             $"Hold SPACE to fill meter (failsafe)";
     }

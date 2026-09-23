@@ -42,9 +42,52 @@ namespace Levelstep.Editor
                 }
             }
 
+            var meter = root.GetComponent<BalanceMeterController>();
+            if (meter != null) EnsureBalancePresets(meter);
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[Levelstep] Balance Board wired in '{scene.path}'. Play, press C to connect, B to calibrate flat.");
+        }
+
+        /// <summary>
+        /// Adds (or updates) the chain/loop preset components plus the K/L switcher on the balance
+        /// board's controller, seeding both presets from the controller's current serialized values so
+        /// the user can tune each board's settings independently in the Inspector.
+        /// </summary>
+        public static void EnsureBalancePresets(BalanceMeterController controller)
+        {
+            var go = controller.gameObject;
+            if (go.GetComponent<BalanceMeterControllerChain>() == null)
+                go.AddComponent<BalanceMeterControllerChain>();
+            if (go.GetComponent<BalanceMeterControllerLoop>() == null)
+                go.AddComponent<BalanceMeterControllerLoop>();
+            if (go.GetComponent<BalanceMeterPresetSwitcher>() == null)
+                go.AddComponent<BalanceMeterPresetSwitcher>();
+
+            var chain = go.GetComponent<BalanceMeterControllerChain>();
+            var loop = go.GetComponent<BalanceMeterControllerLoop>();
+            var switcher = go.GetComponent<BalanceMeterPresetSwitcher>();
+            chain.controller = controller;
+            loop.controller = controller;
+            switcher.chain = chain;
+            switcher.loop = loop;
+
+            foreach (var preset in new BalanceMeterPreset[] { chain, loop })
+            {
+                preset.stableTiltDeg = controller.stableTiltDeg;
+                preset.unstableTiltDeg = controller.unstableTiltDeg;
+                preset.hardFailTiltDeg = controller.hardFailTiltDeg;
+                preset.stableRateDegS = controller.stableRateDegS;
+                preset.unstableRateDegS = controller.unstableRateDegS;
+                preset.hardFailRateDegS = controller.hardFailRateDegS;
+                preset.buildPerSec = controller.buildPerSec;
+                preset.recoverPerSec = controller.recoverPerSec;
+                preset.instabilitySmoothing = controller.instabilitySmoothing;
+                preset.minSecondsBetweenFalls = controller.minSecondsBetweenFalls;
+            }
+
+            Debug.Log("[Levelstep] Balance Board now has chain/loop presets (K = chain, L = loop).");
         }
     }
 }
