@@ -1,0 +1,104 @@
+# Levelstep development context
+
+## Authoritative baseline
+
+- Unity VR bouldering project; editor **6000.6.0f1**, URP **17.6.0**, XR Interaction Toolkit **3.6.0**, OpenXR **1.18.0**, Input System **1.20.0**.
+- Main/only enabled build scene: `Assets/Levelstep/Scenes/ClimbingScene.unity`.
+- User deliberately returned to this stable clone after unwanted Android/PICO build changes. Actual source, scenes, prefabs and settings override claims in the previous conversation.
+- History: session `ses_f90ec8673ffe1F3A1udr8M5RTr`, exported in `old-session-backup.json` (UTF-16 JSON). `session-ses_f90e.md` is an additional, shorter export. Historical plans and verification claims are not proof of the current implementation.
+- Primary workflow is Windows PC VR streamed to a PICO 4, with a WitMotion sensor connected through the white USB adapter. Native Android BLE code and the earlier APK/build utility are absent from this clone. Do not restore those experiments automatically.
+
+## Architecture and files
+
+Custom code is under `Assets/Levelstep/Scripts/`, namespace `Levelstep`. Editor tools are under `Assets/Levelstep/Editor/`, generally namespace `Levelstep.Editor`. Runtime code uses `Assembly-CSharp`; editor code uses `Assembly-CSharp-Editor`. No custom Levelstep assembly definitions.
+
+### Rig and locomotion
+
+- The scene instantiates `Assets/Samples/XR Interaction Toolkit/3.5.1/Starter Assets/Prefabs/XR Origin (XR Rig).prefab`. The sample directory version differs from the installed package version; both are intentional current facts.
+- XRI supplies the CharacterController, body transformer, move/turn/climb providers and near/far interactions. `DynamicMoveProvider` handles head-relative joystick movement; normal collision handling uses `CharacterControllerBodyManipulator`.
+- Keep project-specific rig changes as scene-instance overrides rather than editing imported samples or `Library/PackageCache`.
+- The scene uses 30-degree left/right snap turns. Both Snap Turn and Continuous Turn have `m_EnableTurnAround` overridden off: the unused backward-stick 180-degree gesture was a plausible source of flips reported while testers walked into the wall. Exact tester input was not recorded. Collision code itself does not rotate the rig.
+
+### Walls, holds and difficulty
+
+- `LevelstepWall` and `LevelstepHold` are model-independent authoring components. Assigning a model in the editor replaces their `Model` child using `ModelTools` in `LevelstepModelTools.cs`.
+- Authoring prefabs: `Assets/Levelstep/Prefabs/LevelstepWall.prefab` and `LevelstepHold.prefab`. Empty model slots on these base prefabs are expected; placed instances have model overrides/children.
+- Holds have a kinematic Rigidbody, `ClimbInteractable`, `LevelstepHold` and `HoldRouteTag`. Model rebuilding uses non-convex mesh colliders to avoid convex hull limits and inaccurate grab surfaces. Some legacy tooltips still say convex.
+- Manual placement is the current workflow: `Tools/Levelstep/Snap Hold (click wall to add)` or the hold inspector's Snap to Wall button. Placement matches the surface normal. Legacy grid builders and `HoldPlacementZone` were removed; config still contains historical generation fields and paths.
+- `HoldRouteTag.routeType`: Easy=0, Moderate=1, Hard=2. The menu/config call index 1 Medium.
+- Scene snapshot: 26 holds (6 Easy, 10 Moderate, 10 Hard), three Start holds and three Finish holds; 28 explicitly authored mesh colliders, all non-convex.
+- `DifficultyRouteController` enables climbing only on the selected route and applies route colours through cached MaterialPropertyBlocks. Inactive routes blend toward the wall tone with alpha kept at 1. **Preserve opaque hold rendering**: true transparency repeatedly caused VR popping.
+- `DifficultyMenuButton` drives stamina difficulty, route selection and optional PlayerPrefs persistence. The floating menu uses legacy UGUI Text/Button, XRUIInputModule and trigger-based UI input. Preserve grip-based climbing and separate trigger-based menu input.
+- Difficulty buttons add/reuse a built-in UGUI `Outline` on their background Image at runtime. Only the actual selected index enables its persistent border; selection events, startup and menu re-enabling refresh it. Inspector controls on `DifficultyMenuButton`: Selected Border Color (white) and Selected Border Thickness (6 UI units per axis). It uses the existing UI material and does not alter click handling or scene layout. Unity compile passed; headset visibility/thickness still needs visual confirmation.
+- Tune route stamina through `Assets/Levelstep/Settings/ClimbingConfig.asset` > difficultyPresets. Serialized asset values, not C# default values, determine the actual tuning. Default difficulty is index 1 (Medium).
+
+### Stamina and completion
+
+- `ClimbStaminaController` tracks each hand independently via XRI selection events; the free hand recovers while the other grips. Exhaustion releases that hand and blocks re-gripping until the recovery delay and `minStaminaToGrip` threshold are satisfied.
+- It implements `IXRSelectFilter`, registered on the existing XRInteractionManager. Filtering applies only to `ClimbInteractable`; an exhausted, zero-stamina or balance-locked hand cannot begin a climb selection. Other interactions remain available. Filter and event listeners are removed on destruction.
+- **Do not reject exhausted grabs by calling SelectExit inside selectEntered.** XRI `ClimbInteractable.OnSelectEntered` invokes the base select-enter event before calling `ClimbProvider.StartClimbGrab`. A nested exit inside that event can finish before the provider subsequently starts a stale grab, leaving climb movement active without a valid selection. Pre-selection filtering fixes this ordering problem.
+- `HandStaminaBar` creates per-hand world-space bars at runtime. Their constant mint fill shrinks; hands/controllers tint red. Preserve these distinct visual behaviours.
+- `RouteTimer` starts on the selected route's Start hold and succeeds on its Finish hold only while Running. It aborts on a balance fall or 0.4 seconds without a grip. Grips are tracked as `(interactor, interactable)` pairs so two hands on one hold work correctly.
+- Exhausting one hand while the other supports the player does not invalidate the run. After an aborted run, grab Start again to begin a new valid run; merely recovering and reaching Finish does not revive it.
+- Completion logic is not disabled by stamina. The former rejected-grab event ordering could desynchronise selection, locomotion and the timer; do not bypass timer validity to mask that issue.
+
+### Balance sensor and presets
+
+- `BalanceBoardBridge` is the sole persistent singleton, on the separate root **Balance Board (Sensor)**. `DontDestroyOnLoad` keeps connection/calibration across participant resets.
+- Primary transport: Windows Win32 serial P/Invoke, currently **COM5**, **115200 baud**, 2-second probing interval, auto-connect and flat calibration enabled. An empty port field enables port probing; the config's serial-port override is currently empty. Adapter port numbers can differ on another laptop.
+- Parses 20-byte `0x55 0x61` frames: signed little-endian int16 rates at +8/+10 scaled by 2000/32768, angles at +14/+16 scaled by 180/32768. Worker-thread snapshots feed main-thread calibration and gameplay.
+- `Assets/Witmotion/` retains the modified Windows BLE SDK, namespaces `Assets.Bluetooth`/`Assets.Device`, with `BleWinrtDll.dll`. That BLE route is dormant in the bridge's current Connect path. No Android transport is implemented here.
+- `BalanceMeterController` converts calibrated XY tilt magnitude and angular-rate magnitude into instability, builds/recovers the meter and uses `FallFromBalance`/`SetBalanceLock` to release hands and pause recovery until the meter starts draining.
+- There is one live meter, not two competing controllers. `BalanceMeterControllerChain` and `BalanceMeterControllerLoop` inherit the settings-only `BalanceMeterPreset`; `BalanceMeterPresetSwitcher` applies them to the live meter without resetting its value. Chain is applied on the first Update.
+- Tune the scene's **Balance Board** preset components, not just the live meter or config. Applying a preset disables `readThresholdsFromConfig` and overwrites the live thresholds.
+- Current scene tuning (snapshot; re-read before changing):
+
+  | Setting | Chain | Loop |
+  | --- | --- | --- |
+  | Tilt stable / unstable / hard fail (degrees) | 3 / 4 / 40 | 1 / 2 / 40 |
+  | Rate stable / unstable / hard fail (degrees/sec) | 80 / 120 / 250 | 5 / 15 / 250 |
+  | Build / recover per second | 0.25 / 0.5 | 0.5 / 0.5 |
+  | Smoothing / minimum fall interval | 4 / 1 second | 4 / 1 second |
+
+### HUD, markers and reset
+
+- `BalanceBoardHUD` is an authored world-space canvas in the scene, visible/editable before Play. `BalanceBoardUI` follows the main camera in LateUpdate, currently 0.7 metres forward and -0.1 metres vertically offset. Layout comes from the child RectTransforms.
+- `Assets/Levelstep/Shaders/LevelstepHUD.shader` and `Materials/LevelstepHUD.mat` draw the HUD through geometry using ZTest Always. Material instances preserve individual UI font/texture handling.
+- **Preserve Standalone OpenXR MultiPass** (`Assets/XR/Settings/OpenXRPackageSettings.asset`, Standalone `m_renderMode: 0`). Single-pass optimisation and attempted shader fixes caused one-eye/doubled HUD rendering and were reverted. Current custom HUD shader has no stereo-instancing macros; Android settings still use mode 1.
+- Start/Finish markers are simple authored prefabs, `sm_labelStart.prefab` and `sm_labelFinish.prefab`, assigned per hold via `markerPrefab`/`markerOffset`. The hold spawns its marker, billboards it and shows it only for the selected route. Edit the prefabs to style labels globally; historical runtime-generated text experiments were replaced.
+- `RouteSessionReset`: P reloads the active build scene and deletes `Levelstep.Difficulty`, restoring Medium; holding both controller Menu buttons for 2 seconds is a fallback. Keep the persistent sensor separate from scene-scoped meter, timer and HUD.
+
+## Operator controls
+
+- C: connect when disconnected. B: calibrate flat.
+- Space (held): manual instability/meter failsafe, including without sensor data.
+- K: chain preset. L: loop preset. T: debug overlay.
+- [ / ]: transient stable tilt adjustments. - / =: transient unstable tilt adjustments.
+- P: next-participant reset. Both controller Menu buttons held 2 seconds: reset fallback.
+- Arrow-key sensor simulation only operates when `SimulateEnabled` is explicitly enabled.
+
+## Rendering and performance baseline
+
+- Both URP assets retain MSAA 2, main shadow resolution 2048, HDR off. Scene camera clip planes are 0.03 to 60 metres. `LevelstepFrameRate` requests 90 fps and disables monitor vsync; actual XR pacing depends on the runtime.
+- Baked lighting data/lightmaps and reflection probe exist under `Assets/Levelstep/Scenes/ClimbingScene/`. Preserve them and their GUIDs. The Global Volume references `LevelstepFairVisuals.asset` but is currently inactive.
+- Prior performance work also caches UI/tint writes and reduces repeated scene searches. Preserve the public tuning interfaces; avoid broad performance rewrites without measurement.
+
+## Conventions and verification
+
+- Prefer minimal changes that address a demonstrated cause. Preserve the user's hand-authored scene/layout/tuning. Do not regenerate the scene or restore historical systems based only on conversation summaries.
+- Preserve `.meta` files, GUIDs, serialized field names and prefab overrides. One MonoBehaviour class per matching `.cs` file is important: a previous multi-class preset file bound scene references incorrectly.
+- Use the new Input System for keyboard/controller actions. Do not introduce legacy `UnityEngine.Input` polling.
+- Keep UnityEditor-only helpers behind `#if UNITY_EDITOR` when used by runtime components. Do not edit generated `.csproj`, `.sln`, Library or package-cache files.
+- Scene-writing editor tools are not harmless diagnostics: Place Preview Wall removes matching existing wall roots; Add Balance Board/EnsureBalancePresets reseeds **both** presets from the live controller, overwriting distinct tuning. Inspect tools before invoking them on this authored scene.
+- For automated Unity runs, first ensure the interactive editor has saved and closed this project. Editor executable on the inspected machine: `C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe`. Temporary logs can go under `C:\Users\poiso\AppData\Local\Temp\opencode`.
+- Latest targeted verification: Unity compiled the changes; 7 scene checks and 23 Play Mode integration checks passed using actual XRI selection/climbing, exhaustion, recovery, timer completion and character-controller collision. Scene loaded with no missing scripts. Temporary verification code was removed afterward. Headset/controller hardware behaviour still requires user playtesting; headless OpenXR cannot validate display/tracking.
+- Existing uncommitted changes at session start: `Assets/Settings/Project Configuration/UniversalRenderPipelineGlobalSettings.asset` and the package settings JSON files for `com.unity.learn.iet-framework` and `com.unity.testtools.codecoverage`. Preserve these and the session exports. Do not commit unless requested.
+
+## Outstanding items and discrepancies
+
+- User testing flow mentioned three attempts and a successful result visible until reset. Current code has **no attempt cap** and hides successful/failed results after **4 seconds** (`BalanceBoardUI.ResultShowSeconds`). This is a requirement discrepancy, not permission to change it automatically.
+- Hard-fail tilt/rate thresholds bypass the once-per-full-meter gate and may retrigger after the cooldown. Historical claims of strictly one fall until recovery are broader than the current code.
+- The hold inspector/config advertise global marker fallback fields, but current `LevelstepHold.Start` requires a per-hold marker prefab; all six scene role holds are assigned. Do not promise the fallback works.
+- Historical claims that exhaustion disables whole interactors do not describe this implementation. The targeted fix uses pre-selection filtering, leaving head tracking, UI and other interactor functionality intact.
+- Native PICO BLE/build portability and COM-port deployment require a separate, explicit task. Earlier Android implementation details, APK paths and hardware guarantees from the export do not apply to this clone.
+- Next practical verification: headset test walking into the wall, normal left/right turning, prolonged grip through exhaustion, recovery, balance fall and a fresh successful Start-to-Finish run.

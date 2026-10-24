@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Filtering;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics;
@@ -10,7 +11,7 @@ using UnityEngine.XR.Interaction.Toolkit.Locomotion.Climbing;
 
 namespace Levelstep
 {
-    public class ClimbStaminaController : MonoBehaviour
+    public class ClimbStaminaController : MonoBehaviour, IXRSelectFilter
     {
         public enum HandSide { Left, Right }
 
@@ -78,6 +79,33 @@ namespace Levelstep
 
             AttemptManager();
             CreateHandBars();
+        }
+
+        void OnDestroy()
+        {
+            if (m_Manager != null)
+            {
+                m_Manager.selectFilters.Remove(this);
+                m_Manager.interactableRegistered -= OnInteractableRegistered;
+                m_Manager.interactableUnregistered -= OnInteractableUnregistered;
+            }
+            foreach (var climb in m_Tracked)
+            {
+                if (climb == null) continue;
+                climb.selectEntered.RemoveListener(OnSelectEntered);
+                climb.selectExited.RemoveListener(OnSelectExited);
+            }
+            m_Tracked.Clear();
+            if (Instance == this) Instance = null;
+        }
+
+        public bool canProcess => isActiveAndEnabled;
+
+        public bool Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
+        {
+            if (!(interactable is ClimbInteractable)) return true;
+            var hand = GetHand(ResolveHandSide(interactor));
+            return !BalanceLock && !hand.exhausted && hand.stamina > 0f;
         }
 
         void Update()
@@ -199,6 +227,7 @@ namespace Levelstep
             }
             m_Manager.interactableRegistered += OnInteractableRegistered;
             m_Manager.interactableUnregistered += OnInteractableUnregistered;
+            m_Manager.selectFilters.Add(this);
             RegisterExistingInteractables();
         }
 
@@ -241,12 +270,8 @@ namespace Levelstep
             var side = ResolveHandSide(interactor);
             var hand = GetHand(side);
 
-            if (hand.exhausted)
-            {
-                ForceRelease(interactor, interactable);
-                return;
-            }
-
+            // Stamina is checked by the select filter before XRI enters the grab. Releasing here
+            // would let ClimbInteractable start locomotion after that nested release completes.
             hand.gripping = true;
             hand.regenWait = 0f;
             if (!ContainsGrip(hand, interactor, interactable))
