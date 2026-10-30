@@ -84,6 +84,18 @@ Custom code is under `Assets/Levelstep/Scripts/`, namespace `Levelstep`. Editor 
 - Start/Finish markers are simple authored prefabs, `sm_labelStart.prefab` and `sm_labelFinish.prefab`, assigned per hold via `markerPrefab`/`markerOffset`. The hold spawns its marker, billboards it and shows it only for the selected route. Edit the prefabs to style labels globally; historical runtime-generated text experiments were replaced.
 - `RouteSessionReset`: P reloads the active build scene and deletes `Levelstep.Difficulty`, restoring Medium; holding both controller Menu buttons for 2 seconds is a fallback. Keep the persistent sensor separate from scene-scoped meter, timer and HUD.
 
+### Prototype simulated calibration
+
+- ClimbingScene's Main Camera has a scene-authored child **Simulated Balance Calibration (Prototype)**, instantiated from `Assets/Levelstep/Prefabs/SimulatedBoardCalibration.prefab`. It is a world-space canvas using existing XRUIInputModule/tracked pointer/trigger input; no additional EventSystem or colliders.
+- `SimulatedCalibrationSequence` is explicitly UI-only prototype simulation. It never samples/fabricates sensor data, calls real sensor calibration, alters balance/stamina calculations, or changes sensitivity. `CalibrationPanelView` is a reusable presentation component for a future reach calibration.
+- Default activation is **left secondary face button / PICO Y**, via Inspector-configurable `InputActionProperty` path `<XRController>{LeftHand}/secondaryButton`. Existing right primary/A is Jump, both Menu buttons reset, and no secondary button was used in the original XRI bindings. Activation again cancels/dismisses by default; repeat presses can instead be configured to be ignored. Skip/Cancel buttons use normal pointer + front trigger.
+- Always starts idle/hidden. Activation opens instructions and **I'm Ready**, with unlimited waiting and no countdown/progress/Skip shown. Only `ConfirmReady` starts the existing 3-second countdown/progress; then "Calibration Complete" for 2 seconds and hide. Ready disappears while counting down. Repeated confirmation cannot restart it; even zero durations require Ready. Cancel works while waiting; Skip applies only during countdown. Repeated runs, zero durations and unscaled timing are supported. Outcomes distinguish simulation Completed/Skipped/Cancelled. Owned actions are cleaned up; referenced shared actions are not disabled/disposed.
+- `CalibrationPanelView.readyLabel` and `readyButtonAppearance` expose independent Ready text/state colours/font/border configuration. The Ready button is an authored child under Calibration Panel, repositionable/resizable in the Scene view. The old visible prototype caption is blank/hidden, with its object and reference retained for compatibility; simulation code/behaviour remains explicit and unchanged in purpose. `LevelstepCalibrationTools.UpgradeReadyControls` adds missing controls/bindings without resetting existing geometry. Inspector previews include the waiting and countdown states.
+- Calibration UI geometry is fully Scene-authored. Root camera parenting/pose is set once in editor setup; runtime code never follows/repositions/rebuilds the UI. Text/colours/fonts/timing/input are Inspector-configurable. Progress changes Image.fillAmount, not RectTransforms. Authoring previews and appearance refresh preserve layout.
+- `LevelstepCalibrationTools` adds/selects the feature without replacing an existing instance. Existing TMP font, built-in UI sprite and default materials are reused; no sensitivity multiplier was added. Guide: `Assets/Levelstep/SimulatedCalibrationGuide.md`.
+- Unity compiled; 52 verification checks passed (16 Edit Mode/scene, 34 Play Mode, 2 post-Play/save-reopen), including synthetic OpenXR controller button events, shared input reference lifecycle, tracked UI buttons, layout preservation and unchanged stamina/meter/timer state. Temporary verification code/scenes removed. Physical headset/controller presentation still needs playtesting.
+- Ready-step verification passed another 34 checks (10 Edit Mode, 23 Play Mode, 1 post-Play/save-reopen), including waiting/confirmation gating, tracked UI Ready clicks, duplicate-start prevention, preserved bindings/timing/geometry, Ready appearance configuration, caption hiding and editor upgrade idempotence. Pre-existing QualitySettings changes were preserved. Temporary verification code/scenes removed.
+
 ## Operator controls
 
 - C: connect when disconnected. B: calibrate flat.
@@ -91,6 +103,7 @@ Custom code is under `Assets/Levelstep/Scripts/`, namespace `Levelstep`. Editor 
 - K: chain preset. L: loop preset. T: debug overlay.
 - [ / ]: transient stable tilt adjustments. - / =: transient unstable tilt adjustments.
 - P: next-participant reset. Both controller Menu buttons held 2 seconds: reset fallback.
+- Left controller Y / secondary face button: simulated calibration; press again to cancel/dismiss. This is separate from real sensor calibration on keyboard B.
 - Arrow-key sensor simulation only operates when `SimulateEnabled` is explicitly enabled.
 
 ## Rendering and performance baseline
