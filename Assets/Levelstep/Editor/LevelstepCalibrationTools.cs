@@ -23,10 +23,12 @@ namespace Levelstep.Editor
             var scene = SceneManager.GetActiveScene();
             foreach (var root in scene.GetRootGameObjects())
             {
-                var existing = root.GetComponentInChildren<SimulatedCalibrationSequence>(true);
-                if (existing == null) continue;
-                Selection.activeGameObject = existing.gameObject;
-                return;
+                foreach (var existing in root.GetComponentsInChildren<SimulatedCalibrationSequence>(true))
+                {
+                    if (existing.GetComponent<ReachCalibrationSettings>() != null) continue;
+                    Selection.activeGameObject = existing.gameObject;
+                    return;
+                }
             }
             var prefab = EnsurePrefab();
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);

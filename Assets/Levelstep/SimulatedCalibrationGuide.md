@@ -18,6 +18,8 @@ Real sensor connection/calibration and the existing Chain/Loop balance tuning re
 
 The existing XRI bindings use right primary/A for Jump and both Menu buttons for participant reset. No secondary face-button binding was present in the existing XRI action asset; left Y was selected to avoid these controls and the grip/trigger/thumbstick interactions.
 
+Right-controller **B / secondary** now opens the separate two-stage reach calibration. Both reuse the same sequence/view code and cannot be open simultaneously. Finish or cancel the active panel before opening the other. See `ReachCalibrationGuide.md` for reach timing and predetermined settings.
+
 ## Scene and prefab
 
 - Scene: `Assets/Levelstep/Scenes/ClimbingScene.unity`.
@@ -39,6 +41,8 @@ Select the root object and edit **Simulated Calibration Sequence**:
 | Instruction Text | Default: `Stand comfortably on the balance board.` |
 | Completion Text | Default: `Calibration Complete`. |
 | Use Unscaled Time | Default on: the demo's clock continues if game time is paused. The demo itself never pauses the game. |
+| Additional Stages | Leave empty for balance's original one-stage flow. Reach uses one additional vertical stage after its first horizontal stage. Every stage requires Ready. |
+| Initially Visible | Default off. Optional opt-in only opens instructions/Ready at startup, never a countdown, and respects the one-panel-at-a-time rule. |
 | Activation Input | Embedded Button action by default; edit its binding or choose **Use Reference** and assign an InputActionReference. |
 | Activation Cancels Active Sequence | On: press activation again to cancel/dismiss. Off: further presses are ignored while the current sequence runs. |
 
@@ -89,6 +93,7 @@ The prefab reuses the existing LiberationSans SDF font and Unity's built-in UI s
 - `SimulatedCalibrationSequence` is a generic timed prototype controller. A different prototype can reuse it with different text, timings and activation binding.
 - The code distinguishes `Completed`, `Skipped` and `Cancelled` outcomes. These are outcomes of the **simulation**, never evidence of actual sensor calibration.
 - `TryBeginCalibration` opens `WaitingForReady` and rejects another start while a sequence is active. Only `ConfirmReady` transitions that waiting state into the countdown; calls during any other state do nothing. Neither elapsed time nor Skip bypasses the ready gate. A single state machine is used rather than overlapping coroutines.
+- A shared presentation owner prevents balance/reach overlap, including completion displays. It is released on auto-hide, cancel, disable or destruction and is reset at play-session startup. It does not lock gameplay or create another persistent singleton.
 - Disabling the sequence cancels its UI and removes its input subscription. The scene-scoped object resets naturally during participant/scene reset.
 
 ## Setup tools and validation

@@ -35,7 +35,7 @@ namespace Levelstep.Editor
             }
         }
 
-        static void Edit(CalibrationPanelView panel, System.Action action)
+        internal static void Edit(CalibrationPanelView panel, System.Action action)
         {
             Undo.RegisterFullObjectHierarchyUndo(panel.gameObject, "Edit calibration preview");
             action();

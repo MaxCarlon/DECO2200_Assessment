@@ -96,6 +96,16 @@ Custom code is under `Assets/Levelstep/Scripts/`, namespace `Levelstep`. Editor 
 - Unity compiled; 52 verification checks passed (16 Edit Mode/scene, 34 Play Mode, 2 post-Play/save-reopen), including synthetic OpenXR controller button events, shared input reference lifecycle, tracked UI buttons, layout preservation and unchanged stamina/meter/timer state. Temporary verification code/scenes removed. Physical headset/controller presentation still needs playtesting.
 - Ready-step verification passed another 34 checks (10 Edit Mode, 23 Play Mode, 1 post-Play/save-reopen), including waiting/confirmation gating, tracked UI Ready clicks, duplicate-start prevention, preserved bindings/timing/geometry, Ready appearance configuration, caption hiding and editor upgrade idempotence. Pre-existing QualitySettings changes were preserved. Temporary verification code/scenes removed.
 
+### Simulated reach calibration
+
+- Main Camera also has **Simulated Reach Calibration**, from `Assets/Levelstep/Prefabs/SimulatedReachCalibration.prefab`. It uses the existing `CalibrationPanelView` and shared `SimulatedCalibrationSequence`, with independent authored UI and input/settings. No real reach measurement or grappling has been implemented; no fabricated measurements or prototype caption are player-facing.
+- Default activation: **right secondary face button / PICO B**, configurable through its own InputActionProperty (`<XRController>{RightHand}/secondaryButton`). Left Y remains balance, right A remains Jump, both Menu buttons remain reset. Controller B is separate from keyboard B's real sensor calibration.
+- Reach flow: horizontal instruction + Ready + 3-second countdown; automatically open vertical instruction + Ready + 3-second countdown; "Reach Calibration Complete" for 2 seconds, hide. The generic sequence's existing instructionText/calibrationDuration are stage 1; `additionalStages` supplies vertical stage 2. Balance keeps an empty additionalStages list and its one-stage flow.
+- `initiallyVisible` defaults false. Opting in opens only the first Ready step, never a countdown. A shared static presentation-owner guard on the sequence prevents simultaneous calibration panels through waiting, countdown and completion. It is released on cancel/auto-hide/disable/destroy and reset on subsystem registration; it is not a persistent singleton or gameplay lock.
+- `ReachCalibrationSettings` on the reach root exposes Inspector-authored metre values via read-only properties and `IReachCalibrationSettings`: ComfortableHorizontalReachDistance (0.45), ComfortableVerticalReachDistance (0.6), MaximumGrapplingDistance (3). They are preset data, always accessible even when UI is hidden, and never overwritten by calibration completion. Future consumers should use an assigned component/interface, not parse UI or assume measurements occurred.
+- `LevelstepReachCalibrationTools` copies the existing UI into an independent prefab using Unity APIs and selects existing instances without replacing authoring. `LevelstepCalibrationTools` distinguishes reach from balance when adding/selecting balance. Stage preview controls and configuration preserve all RectTransforms. Guide: `Assets/Levelstep/ReachCalibrationGuide.md`.
+- Verification passed 49 checks (13 Edit Mode/scene, 34 Play Mode, 2 post-Play/save-reopen), including actual Input System synthetic Y/B events, both XRI Ready clicks, two-stage flow, exclusivity and lifecycle, balance regression, initial visibility, independent settings access, and authored layout preservation. Balance prefab and the user's existing SimpleControls.png edits were preserved. Temporary verification code/scenes removed; hardware display/input still needs playtesting.
+
 ## Operator controls
 
 - C: connect when disconnected. B: calibrate flat.
@@ -104,6 +114,7 @@ Custom code is under `Assets/Levelstep/Scripts/`, namespace `Levelstep`. Editor 
 - [ / ]: transient stable tilt adjustments. - / =: transient unstable tilt adjustments.
 - P: next-participant reset. Both controller Menu buttons held 2 seconds: reset fallback.
 - Left controller Y / secondary face button: simulated calibration; press again to cancel/dismiss. This is separate from real sensor calibration on keyboard B.
+- Right controller B / secondary face button: simulated two-stage reach calibration; press again to cancel/dismiss. Only one calibration panel can be open at a time.
 - Arrow-key sensor simulation only operates when `SimulateEnabled` is explicitly enabled.
 
 ## Rendering and performance baseline

@@ -1,8 +1,16 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Levelstep
 {
+    [Serializable]
+    public sealed class SimulatedCalibrationStage
+    {
+        [TextArea] public string instructionText = "";
+        [Min(0f)] public float duration = 3f;
+    }
+
     /// <summary>
     /// PROTOTYPE SIMULATION: this timed presentation does not measure balance, fabricate sensor
     /// readings, call BalanceBoardBridge.CalibrateFlat, or alter balance/stamina calculations.
@@ -22,8 +30,14 @@ namespace Levelstep
         [TextArea] public string completionText = "Calibration Complete";
         public bool useUnscaledTime = true;
 
-        [Header("Activation — default: left secondary button (PICO Y)")]
-        [Tooltip("Use an embedded Button action, or enable Use Reference to assign an existing action. Defaults to the unused left secondary face button.")]
+        [Header("Optional following stages (each requires I'm Ready)")]
+        [Tooltip("The existing instruction/duration above are stage 1. Leave this empty for the balance calibration.")]
+        public SimulatedCalibrationStage[] additionalStages = Array.Empty<SimulatedCalibrationStage>();
+        [Tooltip("Default off. If enabled, show the first Ready step on load; a countdown still requires confirmation. Only one calibration may be open.")]
+        public bool initiallyVisible;
+
+        [Header("Activation")]
+        [Tooltip("Use an embedded Button action, or Use Reference for an existing action. Balance uses left secondary/Y; reach uses right secondary/B.")]
         public InputActionProperty activationInput = new InputActionProperty(new InputAction(
             "Simulated Calibration", InputActionType.Button, "<XRController>{LeftHand}/secondaryButton"));
         [Tooltip("Press activation again to cancel/dismiss the active sequence. Otherwise repeat presses are ignored until it finishes.")]
@@ -33,17 +47,31 @@ namespace Levelstep
         InputAction m_OwnedActivation;
         bool m_OwnsActivation;
         float m_Elapsed;
+        bool m_AnyStageSkipped;
+        static SimulatedCalibrationSequence s_ActiveSequence;
         public Phase CurrentPhase { get; private set; }
         public Outcome LastOutcome { get; private set; }
         public bool IsActive => CurrentPhase != Phase.Idle;
-        public float RemainingSeconds => CurrentPhase == Phase.CountingDown ? Mathf.Max(0f, calibrationDuration - m_Elapsed) : 0f;
+        public int CurrentStageIndex { get; private set; }
+        public int StageCount => 1 + (additionalStages != null ? additionalStages.Length : 0);
+        public float CurrentStageDuration => GetStageDuration(CurrentStageIndex);
+        public string CurrentInstructionText => GetStageInstruction(CurrentStageIndex);
+        public float RemainingSeconds => CurrentPhase == Phase.CountingDown ? Mathf.Max(0f, CurrentStageDuration - m_Elapsed) : 0f;
         public float SimulationProgress { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetPresentationOwner() => s_ActiveSequence = null;
 
         void Awake()
         {
-            // Always idle at load. Editor previews and controller input must never auto-start this demo.
+            // Always idle initially. Opening an opt-in initial panel still cannot start a countdown.
             CurrentPhase = Phase.Idle;
             if (panel != null) { panel.RefreshAppearance(); panel.Hide(); }
+        }
+
+        void Start()
+        {
+            if (initiallyVisible) TryBeginCalibration();
         }
 
         void OnEnable()
@@ -73,6 +101,9 @@ namespace Levelstep
         {
             calibrationDuration = Mathf.Max(0f, calibrationDuration);
             completionMessageDuration = Mathf.Max(0f, completionMessageDuration);
+            if (additionalStages != null)
+                foreach (var stage in additionalStages)
+                    if (stage != null) stage.duration = Mathf.Max(0f, stage.duration);
         }
 
         [ContextMenu("Run Simulated Calibration (Play Mode)")]
@@ -81,11 +112,16 @@ namespace Levelstep
         public bool TryBeginCalibration()
         {
             if (!Application.isPlaying || !isActiveAndEnabled || IsActive) return false;
+            // Presentation ownership only; this is not a persistent singleton or gameplay lock.
+            if (s_ActiveSequence != null && s_ActiveSequence != this && s_ActiveSequence.IsActive) return false;
+            s_ActiveSequence = this;
+            CurrentStageIndex = 0;
+            m_AnyStageSkipped = false;
             m_Elapsed = 0f;
             SimulationProgress = 0f;
             LastOutcome = Outcome.None;
             CurrentPhase = Phase.WaitingForReady;
-            if (panel != null) panel.ShowReady(instructionText);
+            if (panel != null) panel.ShowReady(CurrentInstructionText);
             return true;
         }
 
@@ -96,8 +132,8 @@ namespace Levelstep
             CurrentPhase = Phase.CountingDown;
             m_Elapsed = 0f;
             SimulationProgress = 0f;
-            if (panel != null) panel.ShowInstructions(instructionText, RemainingSeconds, SimulationProgress);
-            if (calibrationDuration <= 0f) EnterComplete(Outcome.Completed);
+            if (panel != null) panel.ShowInstructions(CurrentInstructionText, RemainingSeconds, SimulationProgress);
+            if (CurrentStageDuration <= 0f) FinishStage(false);
         }
 
         /// <summary>Explicit clock entry point for focused verification; this is time, never a sensor sample.</summary>
@@ -107,13 +143,15 @@ namespace Levelstep
             m_Elapsed += seconds;
             if (CurrentPhase == Phase.CountingDown)
             {
-                if (m_Elapsed >= Mathf.Max(0f, calibrationDuration)) { EnterComplete(Outcome.Completed); return; }
-                SimulationProgress = calibrationDuration > 0f ? Mathf.Clamp01(m_Elapsed / calibrationDuration) : 1f;
+                float duration = CurrentStageDuration;
+                if (m_Elapsed >= duration) { FinishStage(false); return; }
+                SimulationProgress = duration > 0f ? Mathf.Clamp01(m_Elapsed / duration) : 1f;
                 if (panel != null) panel.UpdateCountdown(RemainingSeconds, SimulationProgress);
             }
             else if (m_Elapsed >= Mathf.Max(0f, completionMessageDuration))
             {
                 CurrentPhase = Phase.Idle;
+                ReleasePresentation();
                 if (panel != null) panel.Hide();
             }
         }
@@ -121,7 +159,7 @@ namespace Levelstep
         [ContextMenu("Skip Countdown (Play Mode)")]
         public void SkipCalibration()
         {
-            if (CurrentPhase == Phase.CountingDown) EnterComplete(Outcome.Skipped);
+            if (CurrentPhase == Phase.CountingDown) FinishStage(true);
         }
 
         [ContextMenu("Cancel / Dismiss Simulation")]
@@ -129,9 +167,41 @@ namespace Levelstep
         {
             if (CurrentPhase == Phase.WaitingForReady || CurrentPhase == Phase.CountingDown) LastOutcome = Outcome.Cancelled;
             CurrentPhase = Phase.Idle;
+            ReleasePresentation();
             m_Elapsed = 0f;
             SimulationProgress = 0f;
             if (panel != null) panel.Hide();
+        }
+
+        void FinishStage(bool skipped)
+        {
+            m_AnyStageSkipped |= skipped;
+            if (CurrentStageIndex + 1 < StageCount)
+            {
+                CurrentStageIndex++;
+                CurrentPhase = Phase.WaitingForReady;
+                m_Elapsed = 0f;
+                SimulationProgress = 0f;
+                if (panel != null) panel.ShowReady(CurrentInstructionText);
+            }
+            else EnterComplete(m_AnyStageSkipped ? Outcome.Skipped : Outcome.Completed);
+        }
+
+        void ReleasePresentation()
+        {
+            if (s_ActiveSequence == this) s_ActiveSequence = null;
+        }
+
+        public string GetStageInstruction(int index)
+        {
+            if (index <= 0) return instructionText;
+            return additionalStages != null && index <= additionalStages.Length ? additionalStages[index - 1]?.instructionText ?? "" : "";
+        }
+
+        public float GetStageDuration(int index)
+        {
+            if (index <= 0) return Mathf.Max(0f, calibrationDuration);
+            return additionalStages != null && index <= additionalStages.Length ? Mathf.Max(0f, additionalStages[index - 1]?.duration ?? 0f) : 0f;
         }
 
         void EnterComplete(Outcome outcome)
@@ -144,6 +214,7 @@ namespace Levelstep
             if (completionMessageDuration <= 0f)
             {
                 CurrentPhase = Phase.Idle;
+                ReleasePresentation();
                 if (panel != null) panel.Hide();
             }
         }
@@ -152,9 +223,10 @@ namespace Levelstep
         {
             if (Application.isPlaying && isActiveAndEnabled) { ReleaseActivation(); BindActivation(); }
             if (panel == null) return;
+            CurrentStageIndex = Mathf.Clamp(CurrentStageIndex, 0, StageCount - 1);
             panel.RefreshAppearance();
-            if (CurrentPhase == Phase.WaitingForReady) panel.ShowReady(instructionText);
-            else if (CurrentPhase == Phase.CountingDown) panel.ShowInstructions(instructionText, RemainingSeconds, SimulationProgress);
+            if (CurrentPhase == Phase.WaitingForReady) panel.ShowReady(CurrentInstructionText);
+            else if (CurrentPhase == Phase.CountingDown) panel.ShowInstructions(CurrentInstructionText, RemainingSeconds, SimulationProgress);
             else if (CurrentPhase == Phase.Complete) panel.ShowComplete(completionText);
         }
 
