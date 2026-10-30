@@ -26,12 +26,50 @@ The current ClimbingScene instance is ordered **Controllers → Paths → Push �
 ## Quick start: enter your own instructions
 
 1. Select a page in `Settings/TutorialPages`.
-2. Edit **Page Title** and **Description**. Descriptions are deliberately blank for you to author.
+2. Edit **Page Title** and **Description**. Existing authored text is retained; descriptions are independent from the artwork.
 3. Edit **Image** > **Frames Per Second**, **Loop**, **Ping Pong**, **Playback Speed**, and **Auto Play** as needed.
 4. Select **Levelstep Tutorial** in the scene and click **Preview Initial Page (Show Panel)** or navigate with its Inspector buttons.
 5. Enter Play to test frame playback and pointer interaction. Inspector changes to the panel and the currently displayed page apply during Play. Normal Unity Play Mode edits are temporary; make persistent tuning changes outside Play.
 
 Text is independent TextMeshPro UI, never baked into an image by this system. Any text already inside your original artwork remains part of that artwork.
+
+## Per-page layout mode: Image + Text or Full Image
+
+1. Select a page asset in `Assets/Levelstep/Settings/TutorialPages/` (or click its reference in the tutorial's Pages list).
+2. At the top of the page Inspector, use **Page Layout > Layout Mode**:
+   - **Image + Text** uses the original **Image Viewport / Frame Image** and the description beside it.
+   - **Full Image** uses the separate **Full Image Viewport / Full Image**, hides the description and fits the entire sprite as large as possible inside the available area. It works for static images and animations.
+3. Click **Preview This Page in Open Tutorials** to display that page in the Scene view. Once a page is being previewed, changing its mode/settings refreshes the preview without rebuilding it. Play Mode updates immediately too.
+4. Save page edits in Edit Mode. Page order remains independent of layout mode.
+
+Configured examples:
+
+| Page | Mode |
+| --- | --- |
+| Controllers / General Controls | Full Image |
+| Paths | Full Image |
+| Push | Image + Text |
+| Balance Board | Image + Text |
+
+### Make Full Image content larger or reposition it
+
+- In the Hierarchy expand **Levelstep Tutorial > Tutorial Panel**.
+- Select **Full Image Viewport** and use the Scene view Rect Tool to move or resize the full-image content area. Its creation defaults reserve the existing navigation row and leave a small outer margin.
+- Its child **Full Image** stretches inside that area by default. You can independently edit the child's RectTransform, anchors, pivot, rotation, scale and bounds if needed.
+- Edit **Image Viewport / Frame Image** for the Image + Text arrangement. The two arrangements are independent; switching modes only changes visibility and the player's target Image.
+- Full Image always retains the complete sprite's aspect ratio. It never uses Stretch or Fill And Crop, even if those are selected for the page's Image + Text appearance. Square images stay square; unused side margins are the natural result of fitting, not space reserved for a description. Increasing the content area's height allows a larger square image.
+- To enlarge the whole panel, edit **Tutorial Panel**'s RectTransform. The Full Image viewport's stretch anchors respond to parent resizing using normal Unity UI behaviour.
+
+### Padding and optional title
+
+With **Full Image** selected on a page, its **Full Image options** expose:
+
+- **Full Image Padding > Left / Right / Top / Bottom**: per-page margins in canvas UI units. Defaults are 12 units per side. They affect rendered pixels only and never rewrite a RectTransform. Asymmetric padding also shifts the centred available space.
+- **Show Title In Full Image**: off by default so entirely visual pages can also use the header area. Enable it to retain the title; reserve enough header space with Top padding or adjust the Full Image viewport in the Scene view.
+
+Navigation buttons, page counter and the separate Show/Hide toggle retain their existing geometry and functionality in both modes. After moving navigation controls yourself, adjust the Full Image viewport bounds as desired; no automatic layout driver will move it for you.
+
+Save Scene view geometry edits with **Ctrl+S**, outside Play Mode, or save them on the prefab in Prefab Mode. Entering Play, changing pages/modes, previewing and clicking Apply Configuration preserve the saved geometry of **both** arrangements.
 
 ## Add a page or replace frames
 
@@ -85,8 +123,10 @@ Useful objects:
 | Tutorial Panel | Main canvas position, rotation, scale, width and height. |
 | Background | Backing bounds and anchors. |
 | Page Title / Description | Independent text boxes and their anchors/pivots. |
-| Image Viewport | Image area and clipping bounds. |
-| Frame Image (inside Image Viewport) | Image rectangle, position, anchors, pivot, rotation and scale. |
+| Image Viewport | Image + Text image area and clipping bounds. |
+| Frame Image (inside Image Viewport) | Image + Text image rectangle, position, anchors, pivot, rotation and scale. |
+| Full Image Viewport | Separate, shared content area for Full Image pages. |
+| Full Image (inside Full Image Viewport) | Full Image rectangle; supports independent Scene view adjustments and render-only per-page padding. |
 | Previous / Next / Page Counter | Button/counter arrangement and dimensions. |
 | Tutorial Toggle (Always Accessible) | Toggle canvas placement, orientation, scale and dimensions. |
 | Show Hide Tutorial / Label | Toggle button and label geometry. |
@@ -103,11 +143,11 @@ The tutorial is not parented to the headset. It uses ordinary world-space depth 
 
 Edit **Default Content Appearance** on the Tutorial Panel for shared fonts, colours, alignment and image scaling. Enable **Override Content Appearance** on a page to use that page's corresponding appearance settings.
 
-- Image Scaling: **Fit** (preserve full image, possible empty margins), **Stretch**, or **Fill And Crop** (preserve aspect and crop pixels to fill the authored Image rectangle).
+- Image + Text Scaling: **Fit** (preserve full image, possible empty margins), **Stretch**, or **Fill And Crop** (preserve aspect and crop pixels to fill the authored Image rectangle). Full Image always fits without stretching or cropping.
 - Title and description Font Size, Color and Alignment.
 - Optional Font Override.
 
-Appearance overrides never reposition or resize elements. Every page uses the Scene view's shared layout. Old script-based positions/sizes remain available in the read-only **Legacy layout values** foldouts for compatibility, but are never automatically applied. Existing serialized settings have not been deleted.
+Appearance overrides never reposition or resize elements. Pages use their selected mode's Scene-authored container; Full Image padding is independent per page. Old script-based positions/sizes remain available in the read-only **Legacy layout values** foldouts for compatibility, but are never automatically applied. Existing serialized settings have not been deleted.
 
 Text is wrapped, with auto-sizing off. Oversized copy uses ellipsis rather than covering the navigation controls: increase the text area or reduce Font Size to show more. Standard TMP rich-text tags can be used in descriptions.
 
@@ -129,13 +169,13 @@ On **Tutorial Panel**, the custom Inspector provides:
 - **Previous / Next / Show / Hide**: preview page/visibility changes.
 - **Restart Animation / Pause / Resume**: control playback during Play Mode.
 
-On a page asset, **Refresh Open Tutorial Previews** updates any open panel currently displaying that page. Edit Mode changes are explicit and Undoable. No prefab/scene rebuilding runs from `OnValidate`.
+On a page asset, **Preview This Page in Open Tutorials** selects and shows that page in open tutorials that reference it. **Refresh Open Tutorial Previews** updates panels already displaying it. Inspector edits to a currently previewed page refresh its content/mode in Edit Mode with Undo support. No prefab/scene rebuilding runs from `OnValidate`.
 
 For a reusable layout, edit the tutorial prefab's RectTransforms in Prefab Mode and save. For scene-specific tuning, edit the scene instance's RectTransforms and save the scene.
 
 ### Reset layout explicitly
 
-**Reset Layout to Defaults…** is a separate button at the bottom of the Tutorial Panel Inspector. It is available only outside Play Mode and asks for confirmation. It restores the known UI elements' creation geometry without rebuilding objects or changing the root's world placement, page order, content, animation or colour settings. Use **Ctrl+Z** to undo it.
+**Reset Layout to Defaults…** is a separate button at the bottom of the Tutorial Panel Inspector. It is available only outside Play Mode and asks for confirmation. It restores the known UI elements' creation geometry, including both image arrangements, without rebuilding objects or changing the root's world placement, page order, page layout modes, content, animation or colour settings. Use **Ctrl+Z** to undo it.
 
 This reset runs only when explicitly requested, or during creation of a brand-new tutorial prefab. Startup, Apply Configuration, preview, page changes and content edits never trigger it.
 
@@ -153,9 +193,12 @@ The player stays on the tutorial root, outside the hideable panel, to support hi
 - **Create Assets and Prefab If Missing** creates defaults only when the prefab is missing. Existing page assets are reused without overwriting your text or frames.
 - These tools do not create another EventSystem, input action asset, XR rig or interaction manager. A new scene needs the same XR UI input infrastructure as ClimbingScene.
 - **Upgrade Image Rendering (Preserve Layout)** upgrades older tutorial prefabs/instances by disabling the old AspectRatioFitter and adding the UV crop effect to the same Image. It does not change RectTransforms or rebuild objects. This upgrade has already been applied to ClimbingScene and its tutorial prefab; no manual migration is required there.
+- **Add Full Image Layout (Preserve Existing Layouts)** adds only missing Full Image containers/bindings to older tutorial prefabs/instances. Re-running it never resets an existing arrangement or changes page data. The current prefab and ClimbingScene instance are already upgraded; no manual wiring is needed.
 - **Advanced: authored UI references** in the panel Inspector is for deliberately replacing UI objects. The supplied prefab is already fully wired; ordinary authoring does not require touching this foldout.
 
 ## Validation and remaining visual checks
+
+The Full Image update passed **68 targeted checks**: 24 Edit Mode/upgrade checks, 42 Play Mode checks and 2 post-Play/save-reopen checks. These covered old RectTransform preservation, independently authored containers, per-page modes, title/description visibility, static/animated playback, pause/resume and hidden playback, unchanged page order/content/animation settings, tracked UI navigation/toggle clicks, padding/centring, complete UVs and maximum aspect-correct fit for square, wide and portrait sprites. Push and Board page assets stayed byte-for-byte unchanged; only the new layout options were serialized on Controllers and Paths.
 
 The Scene-authored layout update passed **52 targeted checks**: 21 Edit Mode/preservation checks, 28 Play Mode checks, and 3 post-Play/save-reopen checks. Checks included every tutorial RectTransform's position, size, rotation, scale, anchors and pivot; serialized list add/remove/reorder; gameplay navigation order; non-rebuilding Apply Configuration; explicit reset/Undo; all image scaling modes; UV cropping; animation; and tracked UI interaction. The four existing page assets remained byte-for-byte unchanged, preserving authored text, frames and playback settings.
 

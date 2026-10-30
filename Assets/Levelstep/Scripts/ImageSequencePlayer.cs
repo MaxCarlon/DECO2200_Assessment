@@ -68,10 +68,17 @@ namespace Levelstep
 
         public void Bind(Image image, AspectRatioFitter fitter)
         {
-            targetImage = image;
             aspectFitter = fitter;
+            SetTargetImage(image);
+        }
+
+        /// <summary>Route playback to another authored Image without changing its geometry or the clock.</summary>
+        public void SetTargetImage(Image image)
+        {
+            targetImage = image;
             cropEffect = image != null ? image.GetComponent<ImageSequenceCrop>() : null;
             m_LastScaling = (ScalingMode)(-1);
+            m_LastRenderedFrame = -1;
             if (targetImage != null) targetImage.raycastTarget = false;
         }
 

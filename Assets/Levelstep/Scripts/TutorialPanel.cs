@@ -53,6 +53,9 @@ namespace Levelstep
         public Button toggleButton;
         public TMP_Text toggleLabel;
         public ImageSequencePlayer imagePlayer;
+        public Image imageAndTextImage;
+        public RectTransform fullImageViewport;
+        public Image fullImage;
     }
 
     /// <summary>Stationary authored UI. Only this panel's own controls and content are changed.</summary>
@@ -149,10 +152,12 @@ namespace Levelstep
             SetVisible(visible);
         }
 
-        public void PreviewInitialPage()
+        public void PreviewInitialPage() => PreviewPage(initialPage);
+
+        public void PreviewPage(int index)
         {
             ApplyChrome();
-            DisplayPage(initialPage, true);
+            DisplayPage(index, true);
             m_Initialized = true;
             SetVisible(true);
         }
@@ -210,6 +215,7 @@ namespace Levelstep
             m_CurrentAsset = CurrentPageIndex >= 0 ? pages[CurrentPageIndex] : null;
             var layout = m_CurrentAsset != null && m_CurrentAsset.overrideLayout ? m_CurrentAsset.layout : defaultLayout;
             layout = layout ?? defaultLayout ?? new TutorialPageLayout();
+            bool fullImage = ApplyLayoutMode(m_CurrentAsset);
             var font = layout.fontOverride != null ? layout.fontOverride : defaultFont;
             if (view.title != null)
             {
@@ -225,13 +231,37 @@ namespace Levelstep
             {
                 player.speedMultiplier = defaultAnimationSpeed;
                 player.useUnscaledTime = useUnscaledTime;
-                player.SetScalingMode(layout.imageScaling);
+                player.SetScalingMode(fullImage ? ImageSequencePlayer.ScalingMode.Fit : layout.imageScaling);
                 ImageSequencePlayer.PlaybackState state = default;
                 bool resume = !restart && m_CurrentAsset != null && m_Playback.TryGetValue(m_CurrentAsset, out state);
                 player.SetSequence(m_CurrentAsset != null ? m_CurrentAsset.image : null, !resume, state);
                 player.SetPresentationVisible(IsVisible, playWhileHidden);
             }
             UpdateNavigation();
+        }
+
+        bool ApplyLayoutMode(TutorialPage page)
+        {
+            // Missing upgrade references fall back to the original presentation; never rebuild UI at runtime.
+            bool full = page != null && page.layoutMode == TutorialPage.LayoutMode.FullImage &&
+                view.fullImageViewport != null && view.fullImage != null;
+            if (view.imageAndTextImage == null && view.imageViewport != null)
+                view.imageAndTextImage = view.imageViewport.GetComponentInChildren<Image>(true);
+            if (view.imageViewport != null) view.imageViewport.gameObject.SetActive(!full);
+            if (view.fullImageViewport != null) view.fullImageViewport.gameObject.SetActive(full);
+            if (view.description != null) view.description.gameObject.SetActive(!full);
+            if (view.title != null) view.title.gameObject.SetActive(!full || page.showTitleInFullImage);
+            if (view.imagePlayer != null)
+            {
+                var target = full ? view.fullImage : view.imageAndTextImage;
+                if (target != null) view.imagePlayer.SetTargetImage(target);
+            }
+            if (full)
+            {
+                var fit = view.fullImage.GetComponent<TutorialFullImageFit>();
+                if (fit != null) fit.SetPadding(page.fullImagePadding);
+            }
+            return full;
         }
 
         void ApplyChrome()

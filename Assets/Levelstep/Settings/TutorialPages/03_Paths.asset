@@ -12,6 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f4800aa46dca284bb06cdafbc52512e, type: 3}
   m_Name: 03_Paths
   m_EditorClassIdentifier: Assembly-CSharp::Levelstep.TutorialPage
+  layoutMode: 1
+  showTitleInFullImage: 0
+  fullImagePadding:
+    left: 12
+    right: 12
+    top: 12
+    bottom: 12
   pageTitle: Climbing paths
   description: 
   image:

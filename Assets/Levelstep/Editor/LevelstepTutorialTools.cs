@@ -64,9 +64,9 @@ namespace Levelstep.Editor
             if (font == null) throw new InvalidOperationException("Existing TextMeshPro font resources could not be loaded.");
             var pages = new[]
             {
-                EnsurePage("01_Controllers", "Controller instructions", null, AnimationFolder + "/SimpleControls.png"),
+                EnsurePage("01_Controllers", "Controller instructions", null, AnimationFolder + "/SimpleControls.png", TutorialPage.LayoutMode.FullImage),
                 EnsurePage("02_Push", "Climbing / Pushing", AnimationFolder + "/Push", null),
-                EnsurePage("03_Paths", "Climbing paths", AnimationFolder + "/Paths", null),
+                EnsurePage("03_Paths", "Climbing paths", AnimationFolder + "/Paths", null, TutorialPage.LayoutMode.FullImage),
                 EnsurePage("04_Board", "Balance board", AnimationFolder + "/Board", null)
             };
             var root = new GameObject("Levelstep Tutorial");
@@ -87,6 +87,7 @@ namespace Levelstep.Editor
                 var image = CreateImage("Frame Image", view.imageViewport);
                 Stretch(image.rectTransform);
                 image.gameObject.AddComponent<ImageSequenceCrop>().enabled = false;
+                view.imageAndTextImage = image;
                 view.imagePlayer.Bind(image, null);
                 view.pageCounter = CreateText("Page Counter", view.panelRoot, font);
                 view.previousButton = CreateButton("Previous", view.panelRoot, font);
@@ -99,6 +100,7 @@ namespace Levelstep.Editor
                 UnityEventTools.AddPersistentListener(view.nextButton.onClick, controller.NextPage);
                 UnityEventTools.AddPersistentListener(view.toggleButton.onClick, controller.ToggleVisibility);
                 ResetLayoutToDefaults(controller);
+                EnsureFullImageLayout(controller, false);
                 controller.PreviewInitialPage();
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
@@ -130,7 +132,9 @@ namespace Levelstep.Editor
         {
             if (panel == null || panel.View.imagePlayer == null || panel.View.imagePlayer.TargetImage == null) return false;
             var player = panel.View.imagePlayer;
-            var image = player.TargetImage;
+            var image = panel.View.imageAndTextImage != null ? panel.View.imageAndTextImage :
+                (panel.View.imageViewport != null ? panel.View.imageViewport.GetComponentInChildren<Image>(true) : player.TargetImage);
+            if (image == null) return false;
             bool changed = false;
             var fitter = image.GetComponent<AspectRatioFitter>();
             if (fitter != null && fitter.enabled)
@@ -150,13 +154,108 @@ namespace Levelstep.Editor
             }
             var serialized = new SerializedObject(player);
             var property = serialized.FindProperty("cropEffect");
-            if (property.objectReferenceValue != crop)
+            if (player.TargetImage == image && property.objectReferenceValue != crop)
             {
                 property.objectReferenceValue = crop;
                 serialized.ApplyModifiedProperties();
                 changed = true;
             }
             return changed;
+        }
+
+        [MenuItem("Tools/Levelstep/Tutorial/Add Full Image Layout (Preserve Existing Layouts)")]
+        public static void UpgradeFullImageLayouts()
+        {
+            if (Application.isPlaying) return;
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null)
+            {
+                var root = PrefabUtility.LoadPrefabContents(PrefabPath);
+                try
+                {
+                    if (EnsureFullImageLayout(root.GetComponent<TutorialPanel>(), false))
+                        PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                }
+                finally { PrefabUtility.UnloadPrefabContents(root); }
+            }
+            foreach (var panel in Object.FindObjectsByType<TutorialPanel>(FindObjectsInactive.Include))
+            {
+                if (!EnsureFullImageLayout(panel, true)) continue;
+                if (PrefabUtility.IsPartOfPrefabInstance(panel)) PrefabUtility.RecordPrefabInstancePropertyModifications(panel);
+                if (panel.gameObject.scene.IsValid()) EditorSceneManager.MarkSceneDirty(panel.gameObject.scene);
+            }
+        }
+
+        /// <summary>Add only missing bindings/containers. Never rewrite an existing rectangle.</summary>
+        static bool EnsureFullImageLayout(TutorialPanel panel, bool undo)
+        {
+            if (panel == null || panel.View.panelRoot == null) return false;
+            var view = panel.View;
+            if (view.imageAndTextImage != null && view.fullImageViewport != null && view.fullImage != null &&
+                view.fullImage.GetComponent<TutorialFullImageFit>() != null) return false;
+            if (undo) Undo.RecordObject(panel, "Add tutorial Full Image layout");
+            if (view.imageAndTextImage == null && view.imageViewport != null)
+                view.imageAndTextImage = view.imageViewport.GetComponentInChildren<Image>(true);
+            if (view.fullImageViewport == null)
+            {
+                view.fullImageViewport = view.panelRoot.Find("Full Image Viewport") as RectTransform;
+                if (view.fullImageViewport == null)
+                {
+                    view.fullImageViewport = CreateRect("Full Image Viewport", view.panelRoot);
+                    if (undo) Undo.RegisterCreatedObjectUndo(view.fullImageViewport.gameObject, "Add tutorial Full Image layout");
+                    SetDefaultFullImageBounds(view);
+                    if (view.imageViewport != null) view.fullImageViewport.SetSiblingIndex(view.imageViewport.GetSiblingIndex() + 1);
+                    view.fullImageViewport.gameObject.SetActive(false);
+                }
+            }
+            if (view.fullImage == null)
+            {
+                var existing = view.fullImageViewport.Find("Full Image");
+                view.fullImage = existing != null ? existing.GetComponent<Image>() : null;
+                if (view.fullImage == null)
+                {
+                    view.fullImage = CreateImage("Full Image", view.fullImageViewport);
+                    if (undo) Undo.RegisterCreatedObjectUndo(view.fullImage.gameObject, "Add tutorial Full Image");
+                    StretchDefault(view.fullImage.rectTransform);
+                }
+            }
+            if (view.fullImage.GetComponent<TutorialFullImageFit>() == null)
+            {
+                if (undo) Undo.AddComponent<TutorialFullImageFit>(view.fullImage.gameObject);
+                else view.fullImage.gameObject.AddComponent<TutorialFullImageFit>();
+            }
+            EditorUtility.SetDirty(panel);
+            return true;
+        }
+
+        static void SetDefaultFullImageBounds(TutorialViewBindings view)
+        {
+            var rect = view.fullImageViewport;
+            if (rect == null || view.panelRoot == null) return;
+            // Calculate creation bounds only once, reserving the current authored navigation row.
+            Rect panel = view.panelRoot.rect;
+            float bottom = panel.yMin + 24f;
+            var corners = new Vector3[4];
+            foreach (var control in new Transform[] { view.previousButton != null ? view.previousButton.transform : null,
+                view.nextButton != null ? view.nextButton.transform : null, view.pageCounter != null ? view.pageCounter.transform : null })
+            {
+                if (!(control is RectTransform controlRect)) continue;
+                controlRect.GetWorldCorners(corners);
+                foreach (var corner in corners)
+                {
+                    var point = view.panelRoot.InverseTransformPoint(corner);
+                    if (point.x >= panel.xMin && point.x <= panel.xMax && point.y < panel.yMax - 24f)
+                        bottom = Mathf.Max(bottom, point.y + 24f);
+                }
+            }
+            bottom = Mathf.Min(bottom, panel.yMax - 25f);
+            rect.localRotation = Quaternion.identity;
+            rect.localScale = Vector3.one;
+            rect.pivot = Vector2.one * 0.5f;
+            rect.anchoredPosition3D = Vector3.zero;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(24f, bottom - panel.yMin);
+            rect.offsetMax = new Vector2(-24f, -24f);
         }
 
         /// <summary>Only for initial creation or the explicit, Undoable Inspector reset. Never called at runtime.</summary>
@@ -179,8 +278,11 @@ namespace Levelstep.Editor
                 var label = view.toggleButton.GetComponentInChildren<TMP_Text>(true);
                 if (label != null) StretchDefault(label.rectTransform);
             }
-            if (view.imagePlayer != null && view.imagePlayer.TargetImage != null)
-                StretchDefault(view.imagePlayer.TargetImage.rectTransform);
+            var split = view.imageAndTextImage != null ? view.imageAndTextImage :
+                (view.imageViewport != null ? view.imageViewport.GetComponentInChildren<Image>(true) : null);
+            if (split != null) StretchDefault(split.rectTransform);
+            if (view.fullImageViewport != null) SetDefaultFullImageBounds(view);
+            if (view.fullImage != null) StretchDefault(view.fullImage.rectTransform);
         }
 
         static void ResetButton(Button button, Vector2 position)
@@ -218,12 +320,13 @@ namespace Levelstep.Editor
             Stretch(rect);
         }
 
-        static TutorialPage EnsurePage(string name, string title, string folder, string staticImage)
+        static TutorialPage EnsurePage(string name, string title, string folder, string staticImage, TutorialPage.LayoutMode mode = TutorialPage.LayoutMode.ImageAndText)
         {
             string path = PageFolder + "/" + name + ".asset";
             var existing = AssetDatabase.LoadAssetAtPath<TutorialPage>(path);
             if (existing != null) return existing;
             var page = ScriptableObject.CreateInstance<TutorialPage>();
+            page.layoutMode = mode;
             page.pageTitle = title;
             // Descriptions are intentionally blank: the author supplies instructional copy.
             if (folder != null)

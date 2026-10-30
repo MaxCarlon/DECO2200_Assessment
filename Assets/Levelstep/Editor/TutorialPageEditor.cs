@@ -13,9 +13,20 @@ namespace Levelstep.Editor
 
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
             EditorGUI.BeginChangeCheck();
-            DrawDefaultInspector();
-            if (EditorGUI.EndChangeCheck() && Application.isPlaying) RefreshOpenPanels((TutorialPage)target);
+            DrawPropertiesExcluding(serializedObject, "m_Script", "showTitleInFullImage", "fullImagePadding");
+            if (serializedObject.FindProperty("layoutMode").enumValueIndex == (int)TutorialPage.LayoutMode.FullImage)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Full Image options", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("showTitleInFullImage"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("fullImagePadding"), true);
+                EditorGUILayout.HelpBox("Full Image fits the complete sprite without cropping or distortion. Resize/move Full Image Viewport in the Scene view; padding changes the rendered image only. If showing the title, leave header room with Top padding or the viewport bounds.", MessageType.Info);
+            }
+            bool changed = EditorGUI.EndChangeCheck();
+            changed |= serializedObject.ApplyModifiedProperties();
+            if (changed) RefreshOpenPanels((TutorialPage)target);
 
             var page = (TutorialPage)target;
             EditorGUILayout.Space();
@@ -35,8 +46,16 @@ namespace Levelstep.Editor
             using (new EditorGUI.DisabledScope(!AssetDatabase.IsValidFolder(page.FrameFolderPath)))
                 if (GUILayout.Button("Populate Frames From Folder (Natural Order)")) PopulateFrames(page);
             if (GUILayout.Button("Refresh Open Tutorial Previews")) RefreshOpenPanels(page);
+            if (GUILayout.Button("Preview This Page in Open Tutorials"))
+            {
+                foreach (var panel in UnityEngine.Object.FindObjectsByType<TutorialPanel>(FindObjectsInactive.Include))
+                {
+                    int index = panel.pages != null ? panel.pages.IndexOf(page) : -1;
+                    if (index >= 0) TutorialPanelEditor.Edit(panel, () => panel.PreviewPage(index));
+                }
+            }
             EditorGUILayout.HelpBox("Folder import reads existing Sprite sub-assets, including subfolders. It never changes images or import settings. You can also drag sprites directly into Image > Frames. Text and layout stay editable independently.", MessageType.Info);
-            EditorGUILayout.HelpBox("Content Appearance controls image rendering and text styling only. Arrange the shared UI with its RectTransforms in the Scene view; changing pages never moves the UI.", MessageType.Info);
+            EditorGUILayout.HelpBox("Content Appearance controls image rendering and text styling only. Image + Text and Full Image have independent Scene-authored image areas; switching pages/modes never rewrites their RectTransforms.", MessageType.Info);
             m_ShowLegacy = EditorGUILayout.Foldout(m_ShowLegacy, "Legacy page layout values (read-only, not applied)", true);
             if (m_ShowLegacy)
             {
@@ -87,9 +106,7 @@ namespace Levelstep.Editor
             foreach (var panel in UnityEngine.Object.FindObjectsByType<TutorialPanel>(FindObjectsInactive.Include))
             {
                 if (panel.CurrentPage != page) continue;
-                if (!Application.isPlaying) Undo.RegisterFullObjectHierarchyUndo(panel.gameObject, "Refresh tutorial preview");
-                panel.RefreshConfiguration();
-                if (!Application.isPlaying) EditorUtility.SetDirty(panel);
+                TutorialPanelEditor.Edit(panel, panel.RefreshConfiguration);
             }
             SceneView.RepaintAll();
         }

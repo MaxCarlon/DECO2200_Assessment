@@ -5,12 +5,22 @@ using UnityEngine;
 namespace Levelstep
 {
     [Serializable]
+    public sealed class TutorialImagePadding
+    {
+        [Min(0f)] public float left = 12f;
+        [Min(0f)] public float right = 12f;
+        [Min(0f)] public float top = 12f;
+        [Min(0f)] public float bottom = 12f;
+    }
+
+    [Serializable]
     public sealed class TutorialPageLayout
     {
         // Retained for existing serialized assets. Geometry is now authored only on RectTransforms.
         [HideInInspector] public Vector2 imagePosition = new Vector2(-370f, 0f);
         [HideInInspector] public Vector2 imageSize = new Vector2(680f, 680f);
         [Header("Image rendering")]
+        [Tooltip("Image + Text rendering only. Full Image always fits the complete image without stretching or cropping.")]
         public ImageSequencePlayer.ScalingMode imageScaling = ImageSequencePlayer.ScalingMode.Fit;
 
         [Header("Title")]
@@ -33,6 +43,20 @@ namespace Levelstep
     [CreateAssetMenu(fileName = "TutorialPage", menuName = "Levelstep/Tutorial Page")]
     public class TutorialPage : ScriptableObject
     {
+        public enum LayoutMode
+        {
+            [InspectorName("Image + Text")] ImageAndText = 0,
+            [InspectorName("Full Image")] FullImage = 1
+        }
+
+        [Header("Page layout")]
+        [Tooltip("Switch between independently Scene-authored image areas. Neither mode rewrites RectTransforms.")]
+        public LayoutMode layoutMode = LayoutMode.ImageAndText;
+        [Tooltip("Optional title in Full Image mode. Reserve room using Top padding or the Full Image Viewport RectTransform.")]
+        public bool showTitleInFullImage;
+        [Tooltip("Render padding inside the Full Image rectangle, in canvas UI units. This does not resize or reposition any RectTransform.")]
+        public TutorialImagePadding fullImagePadding = new TutorialImagePadding();
+
         [Header("Content")]
         public string pageTitle = "New tutorial page";
         [TextArea(5, 16)] public string description = "";

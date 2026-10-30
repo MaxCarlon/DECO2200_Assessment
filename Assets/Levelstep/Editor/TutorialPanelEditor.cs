@@ -90,7 +90,7 @@ namespace Levelstep.Editor
                     Edit(panel, () => LevelstepTutorialTools.ResetLayoutToDefaults(panel));
         }
 
-        static void Edit(TutorialPanel panel, System.Action action)
+        internal static void Edit(TutorialPanel panel, System.Action action)
         {
             if (!Application.isPlaying) Undo.RegisterFullObjectHierarchyUndo(panel.gameObject, "Edit tutorial preview");
             action();
