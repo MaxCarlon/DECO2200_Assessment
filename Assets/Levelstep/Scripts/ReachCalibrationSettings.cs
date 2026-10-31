@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Levelstep
 {
-    /// <summary>Read-only, Inspector-authored distances for a future consumer. No measurement or grappling behaviour.</summary>
+    /// <summary>Read-only, Inspector-authored reach limits. The accessibility grappler consumes these; calibration does not measure or rewrite them.</summary>
     public interface IReachCalibrationSettings
     {
         float ComfortableHorizontalReachDistance { get; }
@@ -18,7 +18,7 @@ namespace Levelstep
         [SerializeField, Min(0f)] float comfortableHorizontalReachDistance = 0.45f;
         [Tooltip("Authored comfortable vertical reach distance; this is a distance, not a world-space height.")]
         [SerializeField, Min(0f)] float comfortableVerticalReachDistance = 0.6f;
-        [Tooltip("Configured limit for a future grappling system. No grappling is implemented by this component.")]
+        [Tooltip("Configured maximum range used by accessibility grappling. This component stores data only.")]
         [SerializeField, Min(0f)] float maximumGrapplingDistance = 3f;
 
         public float ComfortableHorizontalReachDistance => Mathf.Max(0f, comfortableHorizontalReachDistance);

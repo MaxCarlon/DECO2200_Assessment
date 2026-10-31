@@ -46,6 +46,9 @@ namespace Levelstep
 
         /// <summary>Raised when a run ends. Arguments: elapsed seconds, success.</summary>
         public event Action<float, bool> RunEnded;
+        /// <summary>Local run sequence, not a mobile-app attempt identifier.</summary>
+        public int RunSequence { get; private set; }
+        public event Action RunStarted;
 
         XRInteractionManager m_Manager;
         readonly HashSet<ClimbInteractable> m_Tracked = new HashSet<ClimbInteractable>();
@@ -165,6 +168,8 @@ namespace Levelstep
                 Elapsed = 0f;
                 CurrentState = State.Running;
                 m_NoGripTimer = 0f;
+                RunSequence++;
+                RunStarted?.Invoke();
                 Debug.Log("[RouteTimer] Run started on Start hold '" + hold.name + "'.");
             }
             else if (hold.role == RouteRole.Finish && CurrentState == State.Running)

@@ -15,6 +15,11 @@ namespace Levelstep
     {
         public enum HandSide { Left, Right }
 
+        [Header("Optional hand fatigue")]
+        [Tooltip("Off by default: unlimited hand endurance, no fatigue UI/tint or exhaustion restrictions. Balance-board falls and their temporary balance lock still apply independently.")]
+        public bool enableHandStamina = false;
+        public bool HandStaminaEnabled => enableHandStamina;
+
         [Tooltip("Optional config asset. If unassigned, the serialized defaults below are used.")]
         public LevelstepClimbingConfig config;
 
@@ -32,7 +37,7 @@ namespace Levelstep
         public event Action<HandSide> Exhausted;
         public event Action<HandSide> Recovered;
 
-        /// <summary>While true (set by the balance system after a fall), hand stamina stays pinned at zero.</summary>
+        /// <summary>Independent balance re-grip lock. Enabled fatigue also stays empty until the meter drains.</summary>
         public bool BalanceLock { get; private set; }
 
         public sealed class HandController
@@ -40,6 +45,8 @@ namespace Levelstep
             public float stamina;
             public bool gripping;
             public bool exhausted;
+            public bool assistedMovement;
+            public bool assistedMovementConsumesStamina;
             public float regenWait;
             public readonly List<Grip> grips = new List<Grip>();
         }
@@ -65,11 +72,15 @@ namespace Levelstep
         readonly Dictionary<object, HandSide> m_HandCache = new Dictionary<object, HandSide>();
         readonly Dictionary<HandSide, Transform> m_AnchorCache = new Dictionary<HandSide, Transform>();
         bool m_BarsCreated;
+        bool m_LastHandStaminaEnabled;
+        readonly List<HandStaminaBar> m_HandBars = new List<HandStaminaBar>();
 
         void Awake()
         {
             Instance = this;
             SetDifficulty(config != null ? config.defaultDifficultyIndex : 1);
+            m_LastHandStaminaEnabled = enableHandStamina;
+            if (!enableHandStamina) { ResetFatigue(Left); ResetFatigue(Right); }
         }
 
         void Start()
@@ -105,11 +116,17 @@ namespace Levelstep
         {
             if (!(interactable is ClimbInteractable)) return true;
             var hand = GetHand(ResolveHandSide(interactor));
-            return !BalanceLock && !hand.exhausted && hand.stamina > 0f;
+            if (BalanceLock || (HandStaminaEnabled && (hand.exhausted || hand.stamina <= 0f))) return false;
+            // A remote and a physical grab must not simultaneously drive the same hand.
+            foreach (var grip in hand.grips)
+                if (grip.interactor != interactor && (interactor is IClimbHandInteraction || grip.interactor is IClimbHandInteraction))
+                    return false;
+            return true;
         }
 
         void Update()
         {
+            RefreshHandStaminaSetting();
             if (m_Manager == null && Time.frameCount >= m_ManagerRetryFrame)
                 AttemptManager();
 
@@ -119,9 +136,17 @@ namespace Levelstep
 
         void TickHand(HandController hand, HandSide side)
         {
-            if (hand.gripping)
+            if (!HandStaminaEnabled)
             {
-                hand.stamina -= DrainRate * Time.deltaTime;
+                ResetFatigue(hand);
+                return; // Grip tracking, assisted effort ownership and balance lock remain intact.
+            }
+            if (hand.gripping || hand.assistedMovement)
+            {
+                bool drains = hand.assistedMovement && hand.assistedMovementConsumesStamina;
+                foreach (var grip in hand.grips)
+                    if (!(grip.interactor is IClimbHandInteraction policy) || policy.ConsumesStamina) { drains = true; break; }
+                if (drains) hand.stamina -= DrainRate * Time.deltaTime;
                 if (hand.stamina <= 0f)
                 {
                     hand.stamina = 0f;
@@ -174,14 +199,54 @@ namespace Levelstep
         }
 
         /// <summary>
-        /// Used by the balance board system: drains every hand to zero instantly so the built-in
-        /// exhaustion path (force release, exhausted lock, regen delay, natural regen) plays out.
-        /// No-op when balancing is absent - behaviour is otherwise unchanged.
+        /// Balance-owned release. With fatigue enabled, retains its original exhaustion path;
+        /// with fatigue off, releases actual grips without depleting or exhausting the hands.
         /// </summary>
         public void FallFromBalance()
         {
+            if (!HandStaminaEnabled)
+            {
+                ReleaseForBalance(Left);
+                ReleaseForBalance(Right);
+                return;
+            }
             ExhaustOrDrain(Left, HandSide.Left);
             ExhaustOrDrain(Right, HandSide.Right);
+        }
+
+        void ReleaseForBalance(HandController hand)
+        {
+            // This is a balance fall, not hand fatigue. Preserve real XRI exits and the meter's
+            // independent SetBalanceLock path without depletion, exhaustion events or fatigue haptics.
+            for (int i = hand.grips.Count - 1; i >= 0; i--)
+                ForceRelease(hand.grips[i].interactor, hand.grips[i].interactable);
+            hand.grips.Clear(); hand.gripping = false;
+            ResetFatigue(hand);
+        }
+
+        void ResetFatigue(HandController hand)
+        {
+            hand.stamina = MaxStamina;
+            hand.exhausted = false;
+            hand.regenWait = 0f;
+        }
+
+        public void SetHandStaminaEnabled(bool enabled)
+        {
+            enableHandStamina = enabled;
+            RefreshHandStaminaSetting();
+        }
+
+        void RefreshHandStaminaSetting()
+        {
+            if (m_LastHandStaminaEnabled == enableHandStamina) return;
+            m_LastHandStaminaEnabled = enableHandStamina;
+            // Clean transitions never release a valid grip or preserve stale fatigue restrictions.
+            // Difficulty preset rates/thresholds are not changed.
+            ResetFatigue(Left); ResetFatigue(Right);
+            if (enableHandStamina) CreateHandBars();
+            foreach (var bar in m_HandBars)
+                if (bar != null) bar.SetStaminaPresentationEnabled(enableHandStamina);
         }
 
         void ExhaustOrDrain(HandController hand, HandSide side)
@@ -198,8 +263,7 @@ namespace Levelstep
             }
         }
 
-        /// <summary>Locks (or unlocks) stamina regeneration after a balance fall. While locked, hands stay
-        /// empty and exhausted until the balance bar starts recovering.</summary>
+        /// <summary>Balance gate independent of hand fatigue. With fatigue enabled it also pauses recovery.</summary>
         public void SetBalanceLock(bool locked) => BalanceLock = locked;
 
         void SendHapticPulse(HandSide side)
@@ -300,6 +364,7 @@ namespace Levelstep
 
         HandSide ResolveHandSide(IXRSelectInteractor interactor)
         {
+            if (interactor is IClimbHandInteraction policy) return policy.HandSide;
             if (interactor != null && m_HandCache.TryGetValue(interactor, out var cached))
                 return cached;
 
@@ -327,13 +392,22 @@ namespace Levelstep
 
         public HandController GetHand(HandSide side) => side == HandSide.Left ? Left : Right;
 
+        // Movement effort is not an XRI grip: timer/selection state changes only on actual attachment.
+        public void SetAssistedMovement(HandSide side, bool active, bool consumesStamina)
+        {
+            var hand = GetHand(side);
+            hand.assistedMovement = active;
+            hand.assistedMovementConsumesStamina = consumesStamina;
+            if (!active && !hand.gripping) hand.regenWait = RegenDelay;
+        }
+
         public float GetStamina(HandSide side) => GetHand(side).stamina;
 
-        public float GetNormalizedStamina(HandSide side) => Mathf.Clamp01(GetStamina(side) / MaxStamina);
+        public float GetNormalizedStamina(HandSide side) => HandStaminaEnabled ? Mathf.Clamp01(GetStamina(side) / Mathf.Max(0.0001f, MaxStamina)) : 1f;
 
         public bool IsGripping(HandSide side) => GetHand(side).gripping;
 
-        public bool IsExhausted(HandSide side) => GetHand(side).exhausted;
+        public bool IsExhausted(HandSide side) => HandStaminaEnabled && GetHand(side).exhausted;
 
         public float MaxStamina => maxStamina;
         public float DrainRate => drainRate;
@@ -352,8 +426,8 @@ namespace Levelstep
             regenRate = preset.regenRate;
             regenDelay = preset.regenDelay;
             minStaminaToGrip = preset.minStaminaToGrip;
-            Left.stamina = Mathf.Min(Left.stamina, maxStamina);
-            Right.stamina = Mathf.Min(Right.stamina, maxStamina);
+            Left.stamina = HandStaminaEnabled ? Mathf.Min(Left.stamina, maxStamina) : maxStamina;
+            Right.stamina = HandStaminaEnabled ? Mathf.Min(Right.stamina, maxStamina) : maxStamina;
         }
 
         public Transform FindHandAnchor(HandSide side)
@@ -427,6 +501,7 @@ namespace Levelstep
 
         void CreateHandBars()
         {
+            if (!HandStaminaEnabled) return;
             if (m_BarsCreated) return;
             if (config == null || !config.showStaminaBars) return;
             m_BarsCreated = true;
@@ -444,6 +519,7 @@ namespace Levelstep
                 go.transform.SetParent(anchor, false);
                 var bar = go.AddComponent<HandStaminaBar>();
                 bar.Initialize(this, side, config);
+                m_HandBars.Add(bar);
                 Debug.Log("[Stamina] Hand bar created for " + side + " anchored to '" + anchor.name + "'.");
             }
         }

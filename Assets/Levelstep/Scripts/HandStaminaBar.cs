@@ -43,6 +43,7 @@ namespace Levelstep
         void LateUpdate()
         {
             if (m_Controller == null) return;
+            if (!m_Controller.HandStaminaEnabled) { SetStaminaPresentationEnabled(false); return; }
             UpdateFill();
             UpdateBillboard();
             if (!m_HandleTint && m_Config != null && m_Config.tintHands && Time.frameCount >= m_TintRetryFrame)
@@ -52,6 +53,25 @@ namespace Levelstep
                 SetupHandTint();
             }
             UpdateHandTint();
+        }
+
+        public void SetStaminaPresentationEnabled(bool visible)
+        {
+            if (!visible) RestoreHandTint();
+            if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
+        }
+
+        void OnDisable() => RestoreHandTint();
+
+        void RestoreHandTint()
+        {
+            if (m_TintMaterials == null || m_OriginalColors == null) return;
+            for (int i = 0; i < m_TintMaterials.Length; i++)
+            {
+                if (m_TintMaterials[i] == null) continue;
+                WriteColor(m_TintMaterials[i], m_OriginalColors[i]);
+                if (m_LastTintColors != null && i < m_LastTintColors.Length) m_LastTintColors[i] = m_OriginalColors[i];
+            }
         }
 
         void BuildUI()

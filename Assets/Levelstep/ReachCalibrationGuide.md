@@ -2,7 +2,7 @@
 
 ## What this feature does
 
-This is an Inspector-configurable, timed **simulation** for the accessibility prototype. It does not sample controller/arm positions, calculate reach, generate fake measurements, change climbing behaviour, or implement grappling. Configured reach values are authoring data for a future consumer, not measured calibration results. No such measurements or prototype captions are displayed to players.
+This is an Inspector-configurable, timed **simulation** for the accessibility prototype. It does not sample controller/arm positions, calculate reach, generate fake measurements, or change climbing behaviour. Configured reach values are authoring data consumed by the separate accessibility grappling mechanic, not measured calibration results. No such measurements or prototype captions are displayed to players. See `GrapplingGuide.md` for X-toggled Grapple Mode, either-hand side-grip activation and assisted body movement.
 
 The implementation reuses `SimulatedCalibrationSequence`, `CalibrationPanelView`, the existing Ready/countdown/progress controls, and the existing XR UI input system. Balance and reach have separate UI prefab instances, independent input bindings, timings and appearance. A small shared presentation-owner guard prevents simultaneous calibration panels.
 
@@ -73,13 +73,13 @@ On the same **Simulated Reach Calibration** root, edit **Reach Calibration Setti
 | --- | --- | --- |
 | Comfortable Horizontal Reach Distance | 0.45 m | Authored comfortable horizontal distance. |
 | Comfortable Vertical Reach Distance | 0.60 m | Authored comfortable vertical distance, not a world-space height. |
-| Maximum Grappling Distance | 3.00 m | Authored limit for a future grappling implementation. |
+| Maximum Grappling Distance | 3.00 m | Additional calibration range bound for accessibility grappling; each hand's Inspector maximum and detection radius can shorten it. |
 
-These are editable defaults, not detected participant measurements. They are independent from the countdowns and are accessible before, during and after the simulation, even while the panel is hidden. Repeat/skip/cancel/completion do not replace them. They currently have **no gameplay effect** because grappling has not been implemented.
+These are editable defaults, not detected participant measurements. They are independent from the countdowns and are accessible before, during and after the simulation, even while the panel is hidden. Repeat/skip/cancel/completion do not replace them. **Accessibility grappling now consumes these values** for comfortable-reach eligibility and maximum connection range; see `GrapplingGuide.md`. The calibration sequence itself still measures nothing and implements no movement.
 
-## Clean interface for future scripts
+## Settings interface
 
-Assign the root's `ReachCalibrationSettings` component to a future consumer's serialized field. Read its properties directly, or depend on the read-only `IReachCalibrationSettings` interface:
+Assign the root's `ReachCalibrationSettings` component to a consumer's serialized field. Read its properties directly, or depend on the read-only `IReachCalibrationSettings` interface:
 
 ```csharp
 using Levelstep;
@@ -95,12 +95,12 @@ public class ExampleReachSettingsConsumer : MonoBehaviour
         float horizontal = configured.ComfortableHorizontalReachDistance;
         float vertical = configured.ComfortableVerticalReachDistance;
         float maximumDistance = configured.MaximumGrapplingDistance;
-        // A future system can use these configured limits. No grappling logic is supplied here.
+        // Read configured limits without depending on the calibration UI or its timing.
     }
 }
 ```
 
-No scene search, UI text parsing, controller-position sampling or global settings singleton is necessary. `LastOutcome` on the sequence describes only whether its presentation completed/skipped/cancelled; it is not evidence of actual reach measurement.
+No scene search, UI text parsing, controller-position sampling or global settings singleton is necessary to read these preset values. The current `AccessibilityGrappleController` is a concrete consumer of this same component. `LastOutcome` on the sequence describes only whether its presentation completed/skipped/cancelled; it is not evidence of actual reach measurement. Grappling defaults to usable without running the simulation.
 
 ## Setup and preservation
 
